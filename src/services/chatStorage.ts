@@ -1,9 +1,24 @@
-import { ChatConversation, ChatMessage, QuickReply, Client, Professional } from '@/src/types';
+import { ChatConversation, ChatMessage, QuickReply, Client, Professional, ChatParticipantType } from '@/src/types';
+import { 
+  initSupabaseChatRealtime, 
+  sendSupabaseMessage, 
+  markSupabaseConversationAsRead, 
+  takeOverSupabaseConversation as takeOverSupabase, 
+  handBackSupabaseConversation as handBackSupabase,
+  fetchAndSyncFromSupabase
+} from '@/src/services/supabaseChatService';
 
 export const ADMIN_PARTICIPANT_ID = 'admin-luxe';
 export const ADMIN_PARTICIPANT_NAME = 'Salão Luxe (Recepção / Gerência)';
 export const DONO_PARTICIPANT_ID = 'dono-luxe';
 export const DONO_PARTICIPANT_NAME = 'Dono do Salão Luxe';
+
+// Auto-initialize Supabase Realtime listener on load
+if (typeof window !== 'undefined') {
+  setTimeout(() => {
+    initSupabaseChatRealtime();
+  }, 100);
+}
 
 export const DEFAULT_QUICK_REPLIES: QuickReply[] = [
   {
@@ -249,7 +264,7 @@ export function sendMessageDirectly(params: {
   const isFromAdminOrDono = params.senderRole === 'admin' || params.senderRole === 'dono';
 
   const newMsg: ChatMessage = {
-    id: `msg-${Date.now()}-${Math.random().toString(36).substr(2, 5)}`,
+    id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
     conversationId: params.conversationId,
     senderId: params.senderId,
     senderName: params.senderName,
@@ -261,12 +276,11 @@ export function sendMessageDirectly(params: {
     timestamp
   };
 
-  // 1. Save message directly into localStorage
+  // 1. Local Cache Optimistic Update for Zero Delay
   const currentMsgs = getStoredMessages();
   const updatedMsgs = [...currentMsgs, newMsg];
   localStorage.setItem('chat_messages', JSON.stringify(updatedMsgs));
 
-  // 2. Update conversation metadata
   const currentConvs = getStoredConversationsRaw();
   const snippet = params.content || (params.attachment?.type === 'image' ? '📷 Foto anexada' : '📎 Documento anexado');
 
@@ -313,9 +327,12 @@ export function sendMessageDirectly(params: {
   }
 
   localStorage.setItem('chat_conversations', JSON.stringify(updatedConvs));
-
-  // 3. Broadcast sync event to all components
   broadcastChatUpdate();
+
+  // 2. Persist to Supabase DB asynchronously
+  sendSupabaseMessage(params).catch(err => {
+    console.error('Error sending message to Supabase DB:', err);
+  });
 
   return { newMsg, conversations: updatedConvs, messages: updatedMsgs };
 }
@@ -334,6 +351,11 @@ export function takeOverConversation(conversationId: string, role: 'admin' | 'do
     localStorage.setItem('chat_conversations', JSON.stringify(updatedConvs));
     broadcastChatUpdate();
   }
+
+  // Sync to Supabase
+  takeOverSupabase(conversationId, role).catch(err => {
+    console.error('Error in takeOverSupabase:', err);
+  });
 }
 
 export function handBackConversation(conversationId: string) {
@@ -350,6 +372,11 @@ export function handBackConversation(conversationId: string) {
     localStorage.setItem('chat_conversations', JSON.stringify(updatedConvs));
     broadcastChatUpdate();
   }
+
+  // Sync to Supabase
+  handBackSupabase(conversationId).catch(err => {
+    console.error('Error in handBackSupabase:', err);
+  });
 }
 
 export function markConversationAsReadDirectly(conversationId: string, role: 'admin' | 'participant') {
@@ -390,4 +417,9 @@ export function markConversationAsReadDirectly(conversationId: string, role: 'ad
   }
 
   broadcastChatUpdate();
+
+  // Sync read status to Supabase
+  markSupabaseConversationAsRead(conversationId, role).catch(err => {
+    console.error('Error in markSupabaseConversationAsRead:', err);
+  });
 }
