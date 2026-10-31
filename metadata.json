@@ -1,0 +1,6 @@
+{
+  "name": "Salão Luxe - Portal do Cliente & Agendamento VIP",
+  "description": "Aplicativo premium do Salão Luxe para agendamentos online, vitrine digital de serviços e produtos, atendimento por IA e suporte humano, portal do cliente, portal do profissional e painel administrativo completo.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
