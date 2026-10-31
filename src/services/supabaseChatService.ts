@@ -234,10 +234,14 @@ export async function sendSupabaseMessage(params: {
   const timestamp = new Date().toISOString();
   const isFromAdminOrDono = params.senderRole === 'admin' || params.senderRole === 'dono';
 
+  // Obtain active Supabase auth user if logged in to match auth.uid() in RLS
+  const { data: authData } = await supabase.auth.getUser();
+  const effectiveSenderId = authData?.user?.id || params.senderId;
+
   const newMsg: ChatMessage = {
     id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
     conversationId: params.conversationId,
-    senderId: params.senderId,
+    senderId: effectiveSenderId,
     senderName: params.senderName,
     senderRole: params.senderRole,
     recipientId: params.recipientId,

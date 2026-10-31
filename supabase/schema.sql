@@ -1,5 +1,5 @@
 -- ==============================================================================
--- SALÃO LUXE - ESQUEMA SQL SUPABASE HARDENED COM TRIGGER DE IMUTABILIDADE & AUTH
+-- SALÃO LUXE - ESQUEMA SQL SUPABASE HARDENED COM TRIGGERS DE PROTEÇÃO & RLS ESTRITO
 -- PROJETO SUPABASE: dxbbnoxwhxsmfjkyxfir
 -- ==============================================================================
 
@@ -104,7 +104,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER STABLE SET search_path = public, pg_temp;
 
--- Procedimento seguro de atribuição de papéis (Bootstrapping inicial automático sem segredos expostos)
+-- Procedimento exclusivo de atribuição de papéis (Exige perfil admin autenticado ou service_role)
 CREATE OR REPLACE FUNCTION public.assign_user_role(
     target_user_id UUID,
     target_role TEXT
@@ -115,12 +115,9 @@ BEGIN
         RAISE EXCEPTION 'Papel inválido especificado.';
     END IF;
 
-    -- Permite atribuição se o chamador for um admin verificado OU se ainda não existir nenhum administrador cadastrado no sistema (bootstrap inicial)
-    IF NOT (
-        public.is_authenticated_admin()
-        OR NOT EXISTS (SELECT 1 FROM public.user_roles WHERE role IN ('admin', 'dono'))
-    ) THEN
-        RAISE EXCEPTION 'Acesso negado para atribuição de papéis.';
+    -- Exige estritamente perfil de administrador verificado ou chave service_role do servidor
+    IF NOT public.is_authenticated_admin() THEN
+        RAISE EXCEPTION 'Acesso negado: apenas administradores autenticados ou a chave service_role podem atribuir papéis.';
     END IF;
 
     INSERT INTO public.user_roles (user_id, role, updated_at)
@@ -130,32 +127,80 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp;
 
--- PERMISSÕES DE EXECUÇÃO
-REVOKE EXECUTE ON FUNCTION public.assign_user_role(UUID, TEXT) FROM PUBLIC;
-GRANT EXECUTE ON FUNCTION public.assign_user_role(UUID, TEXT) TO authenticated, service_role;
-
+-- REVOGAÇÃO DE PERMISSÕES PÚBLICAS/ANON E CONCESSÃO RESTRITA PARA FUNÇÕES
+REVOKE EXECUTE ON FUNCTION public.is_authenticated_admin() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.is_authenticated_admin() TO authenticated, service_role;
+
+REVOKE EXECUTE ON FUNCTION public.is_authenticated_professional() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.is_authenticated_professional() TO authenticated, service_role;
 
+REVOKE EXECUTE ON FUNCTION public.assign_user_role(UUID, TEXT) FROM PUBLIC, anon;
+GRANT EXECUTE ON FUNCTION public.assign_user_role(UUID, TEXT) TO authenticated, service_role;
+
 -- ==============================================================================
--- 5. TRIGGER DE IMUTABILIDADE PARA CONTEÚDO E DADOS DE MENSAGENS
+-- 5. TRIGGERS DE PROTEÇÃO DE ESTRUTURA, IDENTIFICAÇÃO E IMUTABILIDADE
 -- ==============================================================================
 
+-- A) Trigger para Tabela chat_conversations:
+-- Protege dados estruturais, de atribuição e de identificação do participante (nome, telefone, whatsapp, email, foto, descrição)
+-- contra alterações por usuários não-administradores, mantendo liberadas apenas atualizações de atendimento (last_message, unread_counts, is_online, updated_at).
+CREATE OR REPLACE FUNCTION public.protect_chat_conversation_immutability()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NOT public.is_authenticated_admin() THEN
+        IF NEW.id IS DISTINCT FROM OLD.id OR
+           NEW.type IS DISTINCT FROM OLD.type OR
+           NEW.participant_id IS DISTINCT FROM OLD.participant_id OR
+           NEW.participant_name IS DISTINCT FROM OLD.participant_name OR
+           NEW.participant_phone IS DISTINCT FROM OLD.participant_phone OR
+           NEW.participant_whatsapp IS DISTINCT FROM OLD.participant_whatsapp OR
+           NEW.participant_email IS DISTINCT FROM OLD.participant_email OR
+           NEW.participant_photo_url IS DISTINCT FROM OLD.participant_photo_url OR
+           NEW.participant_role_description IS DISTINCT FROM OLD.participant_role_description OR
+           NEW.assigned_type IS DISTINCT FROM OLD.assigned_type OR
+           NEW.assigned_professional_id IS DISTINCT FROM OLD.assigned_professional_id OR
+           NEW.assigned_professional_name IS DISTINCT FROM OLD.assigned_professional_name OR
+           NEW.taken_over_by_admin IS DISTINCT FROM OLD.taken_over_by_admin OR
+           NEW.taken_over_by_role IS DISTINCT FROM OLD.taken_over_by_role OR
+           NEW.created_at IS DISTINCT FROM OLD.created_at THEN
+            RAISE EXCEPTION 'Operação negada: Apenas a administração do Salão Luxe pode alterar atribuições e dados de identificação da conversa.';
+        END IF;
+    END IF;
+
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp;
+
+DROP TRIGGER IF EXISTS trg_protect_chat_conversation_immutability ON public.chat_conversations;
+CREATE TRIGGER trg_protect_chat_conversation_immutability
+    BEFORE UPDATE ON public.chat_conversations
+    FOR EACH ROW
+    EXECUTE FUNCTION public.protect_chat_conversation_immutability();
+
+-- B) Trigger para Tabela chat_messages:
+-- Garante imutabilidade total de conteúdo, autoria, destinatário e data, permitindo apenas avanços de status sem retrocesso.
 CREATE OR REPLACE FUNCTION public.protect_chat_message_immutability()
 RETURNS TRIGGER AS $$
 BEGIN
-    -- Impede alteração de conversa, remetente, destinatário, papel ou conteúdo da mensagem
-    IF NEW.conversation_id IS DISTINCT FROM OLD.conversation_id OR
+    IF NEW.id IS DISTINCT FROM OLD.id OR
+       NEW.conversation_id IS DISTINCT FROM OLD.conversation_id OR
        NEW.sender_id IS DISTINCT FROM OLD.sender_id OR
+       NEW.sender_name IS DISTINCT FROM OLD.sender_name OR
+       NEW.sender_role IS DISTINCT FROM OLD.sender_role OR
+       NEW.sender_photo_url IS DISTINCT FROM OLD.sender_photo_url OR
        NEW.recipient_id IS DISTINCT FROM OLD.recipient_id OR
        NEW.content IS DISTINCT FROM OLD.content OR
-       NEW.sender_role IS DISTINCT FROM OLD.sender_role THEN
-        RAISE EXCEPTION 'Operação inválida: campos estruturais e conteúdo da mensagem são imutáveis.';
+       NEW.attachment IS DISTINCT FROM OLD.attachment OR
+       NEW.created_at IS DISTINCT FROM OLD.created_at THEN
+        RAISE EXCEPTION 'Operação inválida: os campos estruturais, de autoria, conteúdo e data das mensagens são estritamente imutáveis.';
     END IF;
 
-    -- Impede a reversão de mensagens já marcadas como 'lida'
     IF OLD.status = 'lida' AND NEW.status != 'lida' THEN
-        RAISE EXCEPTION 'Operação inválida: não é permitido reverter o status de uma mensagem já lida.';
+        RAISE EXCEPTION 'Operação inválida: não é permitido alterar o status de uma mensagem já marcada como lida.';
+    END IF;
+
+    IF OLD.status = 'entregue' AND NEW.status = 'enviada' THEN
+        RAISE EXCEPTION 'Operação inválida: não é permitido retroceder o status de entregue para enviada.';
     END IF;
 
     RETURN NEW;
@@ -168,15 +213,30 @@ CREATE TRIGGER trg_protect_chat_message_immutability
     FOR EACH ROW
     EXECUTE FUNCTION public.protect_chat_message_immutability();
 
+REVOKE EXECUTE ON FUNCTION public.protect_chat_conversation_immutability() FROM PUBLIC, anon;
+REVOKE EXECUTE ON FUNCTION public.protect_chat_message_immutability() FROM PUBLIC, anon;
+
 -- ==============================================================================
--- 6. ROW LEVEL SECURITY (RLS) RIGOROSO
+-- 6. PERMISSÕES DE TABELAS (GRANT) E ROW LEVEL SECURITY (RLS)
 -- ==============================================================================
+
+-- Revogar permissões públicas/anônimas em nível de tabela
+REVOKE ALL ON TABLE public.user_roles FROM PUBLIC, anon;
+REVOKE ALL ON TABLE public.chat_conversations FROM PUBLIC, anon;
+REVOKE ALL ON TABLE public.chat_messages FROM PUBLIC, anon;
+
+-- Conceder permissões para os papéis autenticados e service_role (geridos via RLS)
+GRANT SELECT ON TABLE public.user_roles TO authenticated;
+GRANT ALL ON TABLE public.user_roles TO service_role;
+
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.chat_conversations TO authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.chat_messages TO authenticated, service_role;
 
 ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chat_conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
 
--- Limpeza de políticas anteriores
+-- Limpeza idempotente de políticas anteriores
 DROP POLICY IF EXISTS "Permitir leitura de conversas" ON public.chat_conversations;
 DROP POLICY IF EXISTS "Permitir inserção e edição de conversas" ON public.chat_conversations;
 DROP POLICY IF EXISTS "Acesso seguro a conversas" ON public.chat_conversations;
@@ -270,12 +330,14 @@ CREATE POLICY "Mensagens_Select_Policy" ON public.chat_messages
         )
     );
 
+-- INSERT DE MENSAGENS: Valida remetente, destinatário autorizado da conversa e impede envio para o próprio remetente ou externos
 CREATE POLICY "Mensagens_Insert_Policy" ON public.chat_messages
     FOR INSERT
     WITH CHECK (
         auth.uid() IS NOT NULL
         AND conversation_id IS NOT NULL
         AND sender_id = auth.uid()::text
+        AND sender_id <> recipient_id
         AND (
             (
                 sender_role IN ('cliente', 'profissional') 
@@ -298,26 +360,36 @@ CREATE POLICY "Mensagens_Insert_Policy" ON public.chat_messages
                 OR c.assigned_professional_id = auth.uid()::text
                 OR public.is_authenticated_admin()
             )
+            -- Valida se o recipient_id corresponde ao participante autorizado da conversa ou canal administrativo legítimo
+            AND (
+                chat_messages.recipient_id = c.participant_id
+                OR (c.assigned_professional_id IS NOT NULL AND chat_messages.recipient_id = c.assigned_professional_id)
+                OR chat_messages.recipient_id IN ('admin-luxe', 'dono-luxe')
+                OR EXISTS (
+                    SELECT 1 FROM public.user_roles ur
+                    WHERE ur.user_id::text = chat_messages.recipient_id
+                    AND ur.role IN ('admin', 'dono')
+                )
+            )
         )
     );
 
--- UPDATE DE MENSAGENS: Valida permissão de alteração de status ('entregue', 'lida')
+-- UPDATE DE MENSAGENS: Apenas o DESTINATÁRIO AUTENTICADO ou ADMINISTRADOR pode alterar o status de leitura
 CREATE POLICY "Mensagens_Update_Policy" ON public.chat_messages
     FOR UPDATE
     USING (
         auth.uid() IS NOT NULL
-        AND EXISTS (
-            SELECT 1 FROM public.chat_conversations c
-            WHERE c.id = chat_messages.conversation_id
-            AND (
-                c.participant_id = auth.uid()::text
-                OR c.assigned_professional_id = auth.uid()::text
-                OR public.is_authenticated_admin()
-            )
+        AND (
+            recipient_id = auth.uid()::text
+            OR public.is_authenticated_admin()
         )
     )
     WITH CHECK (
         auth.uid() IS NOT NULL
+        AND (
+            recipient_id = auth.uid()::text
+            OR public.is_authenticated_admin()
+        )
         AND status IN ('enviada', 'entregue', 'lida')
     );
 
