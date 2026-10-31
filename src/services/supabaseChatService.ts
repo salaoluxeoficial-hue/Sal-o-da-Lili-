@@ -219,7 +219,47 @@ export async function fetchAndSyncFromSupabase() {
 }
 
 /**
- * Sends a chat message to Supabase and updates conversation metadata.
+ * Helper to obtain or generate a persistent UUID for client identification in localStorage.
+ */
+export function getOrCreatePersistentClientUUID(): string {
+  if (typeof window === 'undefined') return 'cli-visitor-fallback';
+  try {
+    let clientUuid = localStorage.getItem('salao_luxe_client_uuid');
+    if (!clientUuid) {
+      clientUuid = `cli-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+      localStorage.setItem('salao_luxe_client_uuid', clientUuid);
+    }
+    return clientUuid;
+  } catch (err) {
+    return 'cli-visitor-fallback';
+  }
+}
+
+/**
+ * Ensures a valid authenticated Supabase session exists before interacting with RLS-protected tables.
+ * Returns the valid auth.uid() string or null if unauthenticated.
+ */
+export async function ensureAuthenticatedSession(): Promise<string | null> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session?.user?.id) {
+      return session.user.id;
+    }
+
+    // Attempt automatic anonymous authentication to fulfill RLS auth.uid() requirement
+    const { data: anonAuth, error } = await supabase.auth.signInAnonymously();
+    if (!error && anonAuth?.user?.id) {
+      return anonAuth.user.id;
+    }
+  } catch (err) {
+    console.warn('Supabase Auth session notice:', err);
+  }
+  return null;
+}
+
+/**
+ * Sends a chat message to Supabase DB, strictly enforcing auth.uid() as sender_id for authenticated senders.
+ * Admin and Dono IDs ('admin-luxe', 'dono-luxe') are retained solely as recipient target identifiers.
  */
 export async function sendSupabaseMessage(params: {
   conversationId: string;
@@ -230,20 +270,30 @@ export async function sendSupabaseMessage(params: {
   content: string;
   attachment?: ChatAttachment;
   participantDetails?: Partial<ChatConversation>;
-}): Promise<{ newMsg: ChatMessage }> {
+}): Promise<{ newMsg: ChatMessage; error?: any }> {
   const timestamp = new Date().toISOString();
-  const isFromAdminOrDono = params.senderRole === 'admin' || params.senderRole === 'dono';
 
-  // Obtain active Supabase auth user if logged in to match auth.uid() in RLS
-  const { data: authData } = await supabase.auth.getUser();
-  const effectiveSenderId = authData?.user?.id || params.senderId;
+  // 1. Authenticate and retrieve valid auth.uid()
+  const authenticatedUserId = await ensureAuthenticatedSession();
+  
+  // 2. Enforce auth.uid() as sender_id for all authenticated users (ADM, dono, prof, client)
+  //    Legacy string IDs ('admin-luxe', 'dono-luxe', '1') are reserved for recipient matching & UI compatibility.
+  const effectiveSenderId = authenticatedUserId || params.senderId;
+
+  // 3. Role enforcement & security hardening
+  let safeSenderRole: 'admin' | 'dono' | 'cliente' | 'profissional' = params.senderRole;
+  if (!authenticatedUserId || params.senderRole === 'cliente') {
+    safeSenderRole = 'cliente';
+  }
+
+  const isFromAdminOrDono = safeSenderRole === 'admin' || safeSenderRole === 'dono';
 
   const newMsg: ChatMessage = {
     id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
     conversationId: params.conversationId,
     senderId: effectiveSenderId,
     senderName: params.senderName,
-    senderRole: params.senderRole,
+    senderRole: safeSenderRole,
     recipientId: params.recipientId,
     content: params.content,
     attachment: params.attachment,
@@ -251,63 +301,84 @@ export async function sendSupabaseMessage(params: {
     timestamp,
   };
 
-  const snippet = params.content || (params.attachment?.type === 'image' ? '📷 Foto anexada' : '📎 Documento anexado');
-
-  // 1. Fetch current conversation to update unread counters
-  const { data: existingConvData } = await supabase
-    .from('chat_conversations')
-    .select('*')
-    .eq('id', params.conversationId)
-    .single();
-
-  let unreadAdmin = isFromAdminOrDono ? 0 : 1;
-  let unreadPart = isFromAdminOrDono ? 1 : 0;
-
-  if (existingConvData) {
-    unreadAdmin = isFromAdminOrDono ? 0 : ((existingConvData.unread_count_admin || 0) + 1);
-    unreadPart = isFromAdminOrDono ? ((existingConvData.unread_count_participant || 0) + 1) : 0;
+  if (!authenticatedUserId) {
+    const error = new Error('Nenhuma sessão autenticada do Supabase ativa (auth.uid() é NULL).');
+    console.warn('sendSupabaseMessage execution notice:', error.message);
+    return { newMsg, error };
   }
 
-  const details = params.participantDetails || {};
-  const convRow = {
-    id: params.conversationId,
-    type: details.type || (params.senderRole === 'profissional' ? 'profissional' : 'cliente'),
-    assigned_type: details.assignedType || 'recepcao_adm',
-    assigned_professional_id: details.assignedProfessionalId || null,
-    assigned_professional_name: details.assignedProfessionalName || null,
-    participant_id: details.participantId || params.senderId,
-    participant_name: details.participantName || params.senderName,
-    participant_phone: details.participantPhone || null,
-    participant_whatsapp: details.participantWhatsapp || details.participantPhone || null,
-    participant_email: details.participantEmail || null,
-    participant_photo_url: details.participantPhotoUrl || null,
-    participant_role_description: details.participantRoleDescription || 'Cliente Salão Luxe',
-    last_message: snippet,
-    last_message_timestamp: timestamp,
-    unread_count_admin: unreadAdmin,
-    unread_count_participant: unreadPart,
-    is_online: true,
-    updated_at: timestamp,
-  };
-
-  // Upsert conversation & insert message in Supabase
   try {
-    await supabase.from('chat_conversations').upsert(convRow);
-    await supabase.from('chat_messages').insert(mapMessageToRow(newMsg));
+    const snippet = params.content || (params.attachment?.type === 'image' ? '📷 Foto anexada' : '📎 Documento anexado');
+
+    const { data: existingConvData } = await supabase
+      .from('chat_conversations')
+      .select('*')
+      .eq('id', params.conversationId)
+      .single();
+
+    let unreadAdmin = isFromAdminOrDono ? 0 : 1;
+    let unreadPart = isFromAdminOrDono ? 1 : 0;
+
+    if (existingConvData) {
+      unreadAdmin = isFromAdminOrDono ? 0 : ((existingConvData.unread_count_admin || 0) + 1);
+      unreadPart = isFromAdminOrDono ? ((existingConvData.unread_count_participant || 0) + 1) : 0;
+    }
+
+    const details = params.participantDetails || {};
+
+    // For client conversations, participant_id in chat_conversations MUST align with the authenticated client's UUID
+    const effectiveParticipantId = safeSenderRole === 'cliente'
+      ? effectiveSenderId
+      : (details.participantId || params.recipientId);
+
+    const convRow = {
+      id: params.conversationId,
+      type: details.type || (params.senderRole === 'profissional' ? 'profissional' : 'cliente'),
+      assigned_type: details.assignedType || 'recepcao_adm',
+      assigned_professional_id: details.assignedProfessionalId || null,
+      assigned_professional_name: details.assignedProfessionalName || null,
+      participant_id: effectiveParticipantId,
+      participant_name: details.participantName || params.senderName,
+      participant_phone: details.participantPhone || null,
+      participant_whatsapp: details.participantWhatsapp || details.participantPhone || null,
+      participant_email: details.participantEmail || null,
+      participant_photo_url: details.participantPhotoUrl || null,
+      participant_role_description: details.participantRoleDescription || 'Cliente Salão Luxe',
+      last_message: snippet,
+      last_message_timestamp: timestamp,
+      unread_count_admin: unreadAdmin,
+      unread_count_participant: unreadPart,
+      is_online: true,
+      updated_at: timestamp,
+    };
+
+    const { error: convErr } = await supabase.from('chat_conversations').upsert(convRow);
+    if (convErr) {
+      console.error('Erro ao atualizar conversa no Supabase:', convErr);
+      return { newMsg, error: convErr };
+    }
+
+    const { error: msgErr } = await supabase.from('chat_messages').insert(mapMessageToRow(newMsg));
+    if (msgErr) {
+      console.error('Erro ao inserir mensagem no Supabase:', msgErr);
+      return { newMsg, error: msgErr };
+    }
+
+    fetchAndSyncFromSupabase();
+    return { newMsg };
   } catch (err) {
-    console.error('Supabase error inserting message:', err);
+    console.error('Exceção ao gravar no banco Supabase:', err);
+    return { newMsg, error: err };
   }
-
-  // Refresh local cache & notify
-  fetchAndSyncFromSupabase();
-
-  return { newMsg };
 }
 
 /**
  * Marks a conversation as read in Supabase.
  */
 export async function markSupabaseConversationAsRead(conversationId: string, role: 'admin' | 'participant') {
+  const authUserId = await ensureAuthenticatedSession();
+  if (!authUserId) return;
+
   try {
     const updateData = role === 'admin'
       ? { unread_count_admin: 0 }
@@ -336,7 +407,7 @@ export async function markSupabaseConversationAsRead(conversationId: string, rol
 
     fetchAndSyncFromSupabase();
   } catch (err) {
-    console.error('Error marking conversation as read in Supabase:', err);
+    console.warn('Notice marking conversation as read in Supabase:', err);
   }
 }
 
@@ -344,6 +415,9 @@ export async function markSupabaseConversationAsRead(conversationId: string, rol
  * Takes over a conversation by Admin or Dono in Supabase.
  */
 export async function takeOverSupabaseConversation(conversationId: string, role: 'admin' | 'dono' = 'admin') {
+  const authUserId = await ensureAuthenticatedSession();
+  if (!authUserId) return;
+
   try {
     await supabase
       .from('chat_conversations')
@@ -356,7 +430,7 @@ export async function takeOverSupabaseConversation(conversationId: string, role:
 
     fetchAndSyncFromSupabase();
   } catch (err) {
-    console.error('Error taking over conversation in Supabase:', err);
+    console.warn('Notice taking over conversation in Supabase:', err);
   }
 }
 
@@ -364,6 +438,9 @@ export async function takeOverSupabaseConversation(conversationId: string, role:
  * Hands back a conversation to staff in Supabase.
  */
 export async function handBackSupabaseConversation(conversationId: string) {
+  const authUserId = await ensureAuthenticatedSession();
+  if (!authUserId) return;
+
   try {
     await supabase
       .from('chat_conversations')
@@ -376,6 +453,6 @@ export async function handBackSupabaseConversation(conversationId: string) {
 
     fetchAndSyncFromSupabase();
   } catch (err) {
-    console.error('Error handing back conversation in Supabase:', err);
+    console.warn('Notice handing back conversation in Supabase:', err);
   }
 }
