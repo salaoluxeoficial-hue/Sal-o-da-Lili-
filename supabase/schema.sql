@@ -1,5 +1,6 @@
 -- ==============================================================================
 -- SALÃO LUXE - ESQUEMA SQL SUPABASE PARA CHAT CLIENTE ⇄ ADM & PROFISSIONAL ⇄ ADM
+-- PROJETO SUPABASE: dxbbnoxwhxsmfjkyxfir
 -- ==============================================================================
 
 -- 1. TABELA DE CONVERSAS (chat_conversations)
@@ -42,30 +43,38 @@ CREATE TABLE IF NOT EXISTS public.chat_messages (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- INDEXES PARA DESEMPENHO E DESEMPENHO DE CONSULTA
+-- ÍNDICES PARA ALTA PERFORMANCE E CONSULTA EM TEMPO REAL
 CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation_id ON public.chat_messages(conversation_id);
-CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON public.chat_messages(created_at);
+CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON public.chat_messages(created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_chat_conversations_type ON public.chat_conversations(type);
+CREATE INDEX IF NOT EXISTS idx_chat_conversations_participant_id ON public.chat_conversations(participant_id);
 CREATE INDEX IF NOT EXISTS idx_chat_conversations_updated_at ON public.chat_conversations(updated_at DESC);
 
 -- ==============================================================================
--- 3. HABILITAR ROW LEVEL SECURITY (RLS) E POLÍTICAS DE ACESSO
+-- 3. HABILITAR ROW LEVEL SECURITY (RLS) E POLÍTICAS DE SEGURANÇA E ACESSO
 -- ==============================================================================
 ALTER TABLE public.chat_conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
 
--- Políticas de acesso público/anon para a aplicação interagir de forma segura
-CREATE POLICY "Permitir leitura de conversas" ON public.chat_conversations
-    FOR SELECT USING (true);
+-- Políticas de Acesso para chat_conversations
+DROP POLICY IF EXISTS "Permitir leitura de conversas" ON public.chat_conversations;
+DROP POLICY IF EXISTS "Permitir inserção e edição de conversas" ON public.chat_conversations;
+DROP POLICY IF EXISTS "Acesso seguro a conversas" ON public.chat_conversations;
 
-CREATE POLICY "Permitir inserção e edição de conversas" ON public.chat_conversations
-    FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Acesso seguro a conversas" ON public.chat_conversations
+    FOR ALL
+    USING (true)
+    WITH CHECK (true);
 
-CREATE POLICY "Permitir leitura de mensagens" ON public.chat_messages
-    FOR SELECT USING (true);
+-- Políticas de Acesso para chat_messages
+DROP POLICY IF EXISTS "Permitir leitura de mensagens" ON public.chat_messages;
+DROP POLICY IF EXISTS "Permitir inserção e edição de mensagens" ON public.chat_messages;
+DROP POLICY IF EXISTS "Acesso seguro a mensagens" ON public.chat_messages;
 
-CREATE POLICY "Permitir inserção e edição de mensagens" ON public.chat_messages
-    FOR ALL USING (true) WITH CHECK (true);
+CREATE POLICY "Acesso seguro a mensagens" ON public.chat_messages
+    FOR ALL
+    USING (true)
+    WITH CHECK (true);
 
 -- ==============================================================================
 -- 4. HABILITAR REPLICAÇÃO EM TEMPO REAL (SUPABASE REALTIME)

@@ -191,6 +191,25 @@ export async function fetchAndSyncFromSupabase() {
       msgs = msgRes.data.map(mapRowToMessage);
     }
 
+    // Auto-seed existing history into Supabase if empty
+    if ((!convRes.data || convRes.data.length === 0) && (!msgRes.data || msgRes.data.length === 0)) {
+      try {
+        const rawLocalConvs = localStorage.getItem('chat_conversations');
+        const rawLocalMsgs = localStorage.getItem('chat_messages');
+        const localConvs: ChatConversation[] = rawLocalConvs ? JSON.parse(rawLocalConvs) : [];
+        const localMsgs: ChatMessage[] = rawLocalMsgs ? JSON.parse(rawLocalMsgs) : [];
+
+        if (localConvs.length > 0) {
+          await supabase.from('chat_conversations').upsert(localConvs.map(mapConversationToRow));
+        }
+        if (localMsgs.length > 0) {
+          await supabase.from('chat_messages').upsert(localMsgs.map(mapMessageToRow));
+        }
+      } catch (e) {
+        console.warn('Auto-seed Supabase notice:', e);
+      }
+    }
+
     if (convs.length > 0 || msgs.length > 0) {
       updateLocalCache(convs.length > 0 ? convs : undefined, msgs.length > 0 ? msgs : undefined);
     }
