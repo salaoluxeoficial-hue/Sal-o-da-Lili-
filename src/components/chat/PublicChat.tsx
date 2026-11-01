@@ -14,6 +14,8 @@ import { getInitialChatBranding, ChatBrandingSettings } from '@/src/services/cha
 import { AudioPlayer } from '@/src/components/chat/AudioPlayer';
 import { AudioRecorder } from '@/src/components/chat/AudioRecorder';
 
+import { processAudioMessageWithAI } from '@/src/services/aiAudioChatService';
+
 interface PublicChatProps {
   onBack?: () => void;
   currentClient?: Client;
@@ -175,6 +177,13 @@ export const PublicChat: React.FC<PublicChatProps> = ({ onBack, currentClient })
           ? `Cliente c/ ${selectedProfessional.name}` 
           : 'Cliente Salão Luxe'
       }
+    });
+
+    // Trigger AI response to received audio
+    processAudioMessageWithAI({
+      conversationId,
+      attachment,
+      visitorName: publicClient.name
     });
   };
 

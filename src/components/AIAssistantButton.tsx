@@ -11,6 +11,7 @@ import {
   markConversationAsReadDirectly 
 } from '@/src/services/chatStorage';
 import { getOrCreatePersistentClientUUID } from '@/src/services/supabaseChatService';
+import { processAudioMessageWithAI } from '@/src/services/aiAudioChatService';
 
 interface AIAssistantButtonProps {
   onNavigate?: (view: ViewType) => void;
@@ -91,6 +92,13 @@ export const AIAssistantButton: React.FC<AIAssistantButtonProps> = () => {
         participantRoleDescription: 'Cliente Visitante (Balão Flutuante)'
       }
     });
+
+    // Trigger AI response to received audio
+    processAudioMessageWithAI({
+      conversationId,
+      attachment,
+      visitorName
+    });
   };
 
   // Send text message in floating balloon widget
@@ -124,34 +132,30 @@ export const AIAssistantButton: React.FC<AIAssistantButtonProps> = () => {
 
   return (
     <>
-      {/* Botão Flutuante Minimalista & Sofisticado */}
+      {/* Botão Flutuante Pequeno, Arredondado & Elegante */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-16 sm:bottom-20 right-3 sm:right-5 z-50 flex items-center gap-2 bg-[#0c0c0c] text-white border border-[#c5a059]/40 px-3.5 py-2.5 rounded-full shadow-2xl hover:border-[#c5a059] hover:scale-105 active:scale-95 transition-all duration-300 relative group"
+        className="fixed bottom-20 sm:bottom-24 right-4 sm:right-6 z-50 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#0c0c0c] border-2 border-[#d4af37] text-[#d4af37] shadow-2xl hover:bg-[#141414] hover:scale-110 active:scale-95 transition-all duration-300 flex items-center justify-center shrink-0 relative group"
         title="Atendimento Salão Luxe"
+        aria-label="Abrir atendimento"
       >
-        <div className="w-5 h-5 rounded-full bg-[#c5a059]/20 flex items-center justify-center text-[#c5a059]">
-          <Headphones size={12} />
-        </div>
-        <span className="text-xs font-light tracking-wide text-neutral-200 hidden sm:inline-block">
-          Atendimento
-        </span>
+        <Headphones size={22} className="group-hover:rotate-12 transition-transform" />
 
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 w-4.5 h-4.5 bg-[#c5a059] text-black rounded-full text-[9px] font-bold flex items-center justify-center border-2 border-black">
+          <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#d4af37] text-black rounded-full text-[10px] font-bold flex items-center justify-center border-2 border-[#0c0c0c]">
             {unreadCount}
           </span>
         )}
       </button>
 
-      {/* Modal do Balão Flutuante Compacto & Sofisticado */}
+      {/* Janela de Chat Compacta e Proporcional */}
       {isOpen && (
-        <div className="fixed bottom-16 sm:bottom-20 right-3 sm:right-5 z-50 w-[88vw] sm:w-[330px] md:w-[340px] h-[390px] sm:h-[420px] max-h-[60vh] bg-[#080808] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="fixed bottom-20 sm:bottom-24 right-4 sm:right-6 z-50 w-[320px] sm:w-[350px] max-w-[calc(100vw-32px)] h-[400px] sm:h-[440px] max-h-[70vh] bg-[#080808] border border-[#d4af37]/35 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
           
           {/* Cabeçalho Discreto */}
-          <div className="bg-[#0c0c0c] border-b border-white/5 p-3 flex items-center justify-between shrink-0">
+          <div className="bg-[#0c0c0c] border-b border-[#d4af37]/20 p-3 px-4 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2.5">
-              <div className="w-2 h-2 rounded-full bg-[#c5a059]" />
+              <div className="w-2.5 h-2.5 rounded-full bg-[#d4af37] animate-pulse" />
               <div>
                 <h3 className="text-xs font-semibold text-white">
                   Atendimento Salão Luxe
@@ -164,18 +168,18 @@ export const AIAssistantButton: React.FC<AIAssistantButtonProps> = () => {
 
             <button
               onClick={() => setIsOpen(false)}
-              className="p-1 text-neutral-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors shrink-0"
+              className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-white/10 transition-colors shrink-0"
               title="Fechar"
             >
-              <X size={15} />
+              <X size={16} />
             </button>
           </div>
 
           {/* Conversa Limpa */}
-          <div className="flex-1 p-3 overflow-y-auto space-y-2.5 min-h-0 bg-[#050505]">
+          <div className="flex-1 p-3.5 overflow-y-auto space-y-2.5 min-h-0 bg-[#050505]">
             {liveChatMessages.length === 0 ? (
               <div className="h-full flex flex-col items-center justify-center text-center p-3 space-y-1.5">
-                <span className="text-[10px] text-[#c5a059] font-medium tracking-wider uppercase">
+                <span className="text-[10px] text-[#d4af37] font-medium tracking-wider uppercase">
                   Canal Direto
                 </span>
                 <p className="text-neutral-400 text-xs font-light max-w-xs leading-relaxed">
@@ -267,7 +271,7 @@ export const AIAssistantButton: React.FC<AIAssistantButtonProps> = () => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Digite sua mensagem..."
-              className="flex-1 bg-[#141414] border border-white/10 focus:border-[#c5a059] text-white rounded-xl px-2.5 py-1.5 text-xs outline-none placeholder:text-neutral-500 font-light transition-all"
+              className="flex-1 bg-[#141414] border border-white/10 focus:border-[#d4af37] text-white rounded-xl px-2.5 py-1.5 text-xs outline-none placeholder:text-neutral-500 font-light transition-all"
             />
 
             {/* Botão de Envio Minimalista */}
