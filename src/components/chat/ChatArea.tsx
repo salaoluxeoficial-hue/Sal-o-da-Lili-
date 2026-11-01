@@ -143,14 +143,14 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
 
   return (
     <div className="flex-1 flex flex-col h-full bg-[#070707] overflow-hidden relative">
-      {/* Chat Header */}
-      <div className="px-3.5 py-2.5 bg-[#0a0a0a] border-b border-[#d4af37]/15 flex items-center justify-between gap-2 shrink-0 z-10 flex-wrap sm:flex-nowrap">
-        <div className="flex items-center gap-2.5 min-w-0">
+      {/* Chat Header Compacto */}
+      <div className="px-3 py-2 bg-[#0a0a0a] border-b border-[#d4af37]/15 flex items-center justify-between gap-1.5 shrink-0 z-10 flex-nowrap">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
           {onBackToList && (
             <button
               onClick={onBackToList}
-              className="md:hidden p-1.5 text-neutral-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
-              title="Voltar para a lista"
+              className="p-1 text-neutral-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors shrink-0"
+              title="Voltar para a lista de conversas"
             >
               <ArrowLeft size={16} />
             </button>
@@ -162,93 +162,74 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               <img
                 src={conversation.participantPhotoUrl}
                 alt={conversation.participantName}
-                className="w-8 h-8 rounded-full object-cover border border-[#d4af37]/40 shadow-sm"
+                className="w-7 h-7 rounded-full object-cover border border-[#d4af37]/40 shadow-sm"
               />
             ) : (
-              <div className="w-8 h-8 rounded-full bg-[#161616] border border-[#d4af37]/40 flex items-center justify-center text-[#d4af37] font-semibold text-[11px] shadow-sm">
+              <div className="w-7 h-7 rounded-full bg-[#161616] border border-[#d4af37]/40 flex items-center justify-center text-[#d4af37] font-semibold text-[10px] shadow-sm">
                 {getInitials(conversation.participantName)}
               </div>
             )}
             {conversation.isOnline && (
-              <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-emerald-500 border-2 border-[#0a0a0a] rounded-full" />
+              <span className="absolute bottom-0 right-0 w-2 h-2 bg-emerald-500 border-2 border-[#0a0a0a] rounded-full" />
             )}
           </div>
 
           {/* Participant Info */}
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <h3 className="text-white font-bold text-sm truncate">{conversation.participantName}</h3>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-1.5">
+              <h3 className="text-white font-semibold text-xs truncate">{conversation.participantName}</h3>
               <span className={cn(
-                "text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded shrink-0",
+                "text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.2 rounded shrink-0",
                 conversation.type === 'profissional'
                   ? "bg-[#d4af37]/15 text-[#d4af37] border border-[#d4af37]/30"
                   : "bg-blue-500/15 text-blue-400 border border-blue-500/25"
               )}>
-                {conversation.type === 'profissional' ? 'Equipe Luxe' : 'Cliente'}
+                {conversation.type === 'profissional' ? 'Equipe' : 'Cliente'}
               </span>
-
-              {conversation.assignedProfessionalName && (
-                <span className="hidden sm:inline-block px-2 py-0.5 rounded text-[10px] bg-purple-500/15 text-purple-300 border border-purple-500/30 font-semibold truncate">
-                  Profissional: {conversation.assignedProfessionalName}
-                </span>
-              )}
             </div>
-            <p className="text-[11px] text-neutral-400 truncate flex items-center gap-2">
-              <span>{conversation.participantRoleDescription || 'Ativo'}</span>
-              {(conversation.participantPhone || conversation.participantWhatsapp) && (
-                <>
-                  <span className="text-neutral-600">•</span>
-                  <span>{conversation.participantWhatsapp || conversation.participantPhone}</span>
-                </>
-              )}
+            <p className="text-[10px] text-neutral-400 truncate">
+              {conversation.participantRoleDescription || 'Ativo'}
             </p>
           </div>
         </div>
 
         {/* Action Header Tools */}
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-1 shrink-0">
           {/* Identity & Perspective switcher for ADM */}
           {activeSenderMode === 'admin' ? (
-            <div className="flex items-center gap-1 bg-[#141414] border border-[#d4af37]/30 rounded-xl p-1 text-xs">
+            <div className="flex items-center bg-[#141414] border border-[#d4af37]/30 rounded-lg p-0.5 text-xs">
               <button
                 onClick={() => setAdminIdentity('admin')}
                 className={cn(
-                  "px-2 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1",
+                  "px-1.5 py-0.5 rounded text-[10px] font-bold transition-all",
                   adminIdentity === 'admin'
                     ? "bg-[#d4af37] text-black shadow-sm"
                     : "text-neutral-400 hover:text-white"
                 )}
                 title="Responder identificado como Recepção / Gerência"
               >
-                <span>ADM</span>
+                ADM
               </button>
               <button
                 onClick={() => setAdminIdentity('dono')}
                 className={cn(
-                  "px-2 py-1 rounded-lg text-[11px] font-bold transition-all flex items-center gap-1",
+                  "px-1.5 py-0.5 rounded text-[10px] font-bold transition-all flex items-center gap-0.5",
                   adminIdentity === 'dono'
                     ? "bg-[#d4af37] text-black shadow-sm"
                     : "text-neutral-400 hover:text-white"
                 )}
                 title="Responder identificado como Dono do Salão"
               >
-                <Crown size={12} />
+                <Crown size={10} />
                 <span>Dono</span>
-              </button>
-              <button
-                onClick={() => setActiveSenderMode('participant')}
-                className="p-1 text-neutral-400 hover:text-[#d4af37]"
-                title="Simular resposta do participante"
-              >
-                <Repeat size={13} />
               </button>
             </div>
           ) : (
             <button
               onClick={() => setActiveSenderMode('admin')}
-              className="flex items-center gap-1 px-2.5 py-1 bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/40 rounded-xl text-xs font-bold"
+              className="flex items-center gap-1 px-2 py-0.5 bg-[#d4af37]/20 text-[#d4af37] border border-[#d4af37]/40 rounded-lg text-[10px] font-bold"
             >
-              <Repeat size={12} />
+              <Repeat size={10} />
               <span>Modo ADM</span>
             </button>
           )}
@@ -258,22 +239,20 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
             <a
               href={waUrl}
               target="_blank"
-              rel="noopener noreferrer"
-              className="px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-colors"
-              title="Abrir conversa no WhatsApp oficial"
+              rel="noreferrer"
+              className="p-1 text-emerald-400 hover:bg-emerald-500/10 rounded-lg transition-colors border border-emerald-500/20"
+              title="Abrir WhatsApp"
             >
-              <ExternalLink size={14} />
-              <span className="hidden sm:inline">WhatsApp</span>
+              <Phone size={13} />
             </a>
           )}
-
           {/* Info toggle */}
           <button
             onClick={() => setShowParticipantInfo(!showParticipantInfo)}
-            className="p-2 text-neutral-400 hover:text-white hover:bg-white/5 rounded-xl transition-colors"
+            className="p-1 text-neutral-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
             title="Ver detalhes do cadastro"
           >
-            <Info size={18} />
+            <Info size={14} />
           </button>
         </div>
       </div>

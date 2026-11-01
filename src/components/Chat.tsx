@@ -66,13 +66,6 @@ export const Chat: React.FC = () => {
   const [isBrandingModalOpen, setIsBrandingModalOpen] = useState(false);
   const [newChatSearch, setNewChatSearch] = useState('');
 
-  // Keep first conversation selected if none is active on desktop
-  useEffect(() => {
-    if (!activeConversationId && conversations.length > 0 && window.innerWidth >= 768) {
-      setActiveConversationId(conversations[0].id);
-    }
-  }, [conversations, activeConversationId]);
-
   // Real-time synchronization listener for cross-component chat updates
   useEffect(() => {
     const handleSync = () => {
@@ -200,106 +193,83 @@ export const Chat: React.FC = () => {
   }, [clients, professionals, newChatSearch]);
 
   return (
-    <div className="space-y-4">
-      {/* Module Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-white">
-              Gerenciamento de Conversas & Chat ADM
+    <div className="w-full max-w-[380px] mx-auto px-1 sm:px-0 space-y-2.5 animate-in fade-in duration-300">
+      {/* Cabeçalho Compacto do Chat / Atendimento ADM */}
+      <div className="bg-[#0b0b0b] border border-[#d4af37]/25 rounded-2xl p-2.5 px-3 flex items-center justify-between gap-2 shadow-lg">
+        <div className="flex items-center gap-2 min-w-0">
+          <div className="w-2 h-2 rounded-full bg-[#d4af37] animate-pulse shrink-0" />
+          <div className="min-w-0">
+            <h1 className="text-xs font-semibold text-white tracking-wide truncate">
+              Chat & Atendimento ADM
             </h1>
-            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#d4af37]/15 text-[#d4af37] border border-[#d4af37]/30">
-              Painel Restrito
-            </span>
+            <p className="text-[10px] text-neutral-400 font-light truncate">
+              Painel Master • Salão Luxe
+            </p>
           </div>
-          <p className="text-neutral-400 text-xs mt-0.5">
-            Atendimento centralizado para mensagens de clientes e comunicação com profissionais.
-          </p>
         </div>
 
-        {/* Header Action Buttons */}
-        <div className="flex items-center gap-2">
+        {/* Ações Rápidas em botões compactos */}
+        <div className="flex items-center gap-1 shrink-0">
           <button
             onClick={() => setIsBrandingModalOpen(true)}
-            className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all hover:border-[#d4af37]/40"
-            title="Personalizar fotos, zoom e enquadramento dos atendimentos"
+            className="p-1.5 bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-[#d4af37] border border-white/10 rounded-lg text-xs transition-colors"
+            title="Personalizar fotos e avatares"
           >
-            <Sparkles size={14} className="text-[#d4af37]" />
-            <span>Personalizar</span>
+            <Sparkles size={13} className="text-[#d4af37]" />
           </button>
 
           <button
             onClick={() => setIsQuickRepliesModalOpen(true)}
-            className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all hover:border-[#d4af37]/40"
+            className="p-1.5 bg-white/5 hover:bg-white/10 text-neutral-300 hover:text-[#d4af37] border border-white/10 rounded-lg text-xs transition-colors"
+            title="Respostas Rápidas"
           >
-            <Zap size={14} className="text-[#d4af37]" />
-            <span>Respostas Rápidas</span>
+            <Zap size={13} className="text-[#d4af37]" />
           </button>
 
           <button
             onClick={() => setIsNewChatModalOpen(true)}
-            className="px-3 py-1.5 bg-[#d4af37] hover:bg-[#b8860b] text-black rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-md shadow-[#d4af37]/20"
+            className="px-2 py-1 bg-[#d4af37] hover:bg-[#b8860b] text-black font-semibold rounded-lg text-xs flex items-center gap-1 transition-all shadow-sm"
+            title="Nova Conversa"
           >
-            <Plus size={14} />
-            <span>Nova Conversa</span>
+            <Plus size={12} />
+            <span className="text-[11px]">Novo</span>
           </button>
         </div>
       </div>
 
-      {/* KPI Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        <div className="bg-[#0c0c0c] border border-white/10 rounded-xl p-3 flex items-center justify-between">
-          <div>
-            <span className="text-neutral-400 text-[11px] font-medium block">Total Conversas</span>
-            <span className="text-base sm:text-lg font-bold text-white mt-0.5 block">{totalConversationsCount}</span>
-            <span className="text-[10px] text-[#d4af37]">Canais ativos</span>
-          </div>
-          <div className="w-8 h-8 rounded-lg bg-[#d4af37]/10 text-[#d4af37] flex items-center justify-center border border-[#d4af37]/20">
-            <MessageSquare size={16} />
-          </div>
+      {/* Indicadores de Status Compactos */}
+      <div className="grid grid-cols-4 gap-1.5 text-center select-none">
+        <div className="bg-[#0d0d0d] border border-white/5 rounded-xl py-1 px-1">
+          <span className="text-[9px] text-neutral-500 block leading-tight">Total</span>
+          <span className="text-xs font-bold text-white block">{totalConversationsCount}</span>
         </div>
-
-        <div className="bg-[#0c0c0c] border border-white/10 rounded-xl p-3 flex items-center justify-between">
-          <div>
-            <span className="text-neutral-400 text-[11px] font-medium block">Clientes</span>
-            <span className="text-base sm:text-lg font-bold text-white mt-0.5 block">{clientConversationsCount}</span>
-            <span className="text-[10px] text-blue-400">Atendimento VIP</span>
-          </div>
-          <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center border border-blue-500/20">
-            <UserSquare2 size={16} />
-          </div>
+        <div className="bg-[#0d0d0d] border border-white/5 rounded-xl py-1 px-1">
+          <span className="text-[9px] text-blue-400 block leading-tight">Clientes</span>
+          <span className="text-xs font-bold text-white block">{clientConversationsCount}</span>
         </div>
-
-        <div className="bg-[#0c0c0c] border border-white/10 rounded-xl p-3 flex items-center justify-between">
-          <div>
-            <span className="text-neutral-400 text-[11px] font-medium block">Equipe</span>
-            <span className="text-base sm:text-lg font-bold text-white mt-0.5 block">{proConversationsCount}</span>
-            <span className="text-[10px] text-emerald-400">Comunicação interna</span>
-          </div>
-          <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20">
-            <Users size={16} />
-          </div>
+        <div className="bg-[#0d0d0d] border border-white/5 rounded-xl py-1 px-1">
+          <span className="text-[9px] text-emerald-400 block leading-tight">Equipe</span>
+          <span className="text-xs font-bold text-white block">{proConversationsCount}</span>
         </div>
-
-        <div className="bg-[#0c0c0c] border border-white/10 rounded-xl p-3 flex items-center justify-between">
-          <div>
-            <span className="text-neutral-400 text-[11px] font-medium block">Não Lidas</span>
-            <span className="text-base sm:text-lg font-bold text-white mt-0.5 block">{totalUnreadCount}</span>
-            <span className="text-[10px] text-rose-400">Pendentes</span>
-          </div>
-          <div className="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center border border-rose-500/20">
-            <MessageCircle size={16} />
-          </div>
+        <div className="bg-[#0d0d0d] border border-white/5 rounded-xl py-1 px-1">
+          <span className="text-[9px] text-rose-400 block leading-tight">Não Lidas</span>
+          <span className="text-xs font-bold text-white block">{totalUnreadCount}</span>
         </div>
       </div>
 
-      {/* Main Chat Interface Container */}
-      <div className="bg-[#0a0a0a] border border-[#d4af37]/20 rounded-2xl overflow-hidden shadow-2xl h-[460px] sm:h-[500px] max-h-[65vh] flex flex-col md:flex-row">
-        {/* Left Sidebar */}
-        <div className={cn(
-          "h-full md:block",
-          activeConversationId ? "hidden md:flex" : "flex flex-col w-full"
-        )}>
+      {/* Janela de Atendimento Compacta e Centralizada (380px no desktop, responsiva no mobile, max 75vh) */}
+      <div className="w-full h-[75vh] max-h-[75vh] bg-[#080808] border border-[#d4af37]/30 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
+        {activeConversation ? (
+          <ChatArea
+            conversation={activeConversation}
+            messages={activeMessages}
+            onSendMessage={handleSendMessage}
+            onBackToList={() => setActiveConversationId(null)}
+            quickReplies={quickReplies}
+            onOpenQuickRepliesModal={() => setIsQuickRepliesModalOpen(true)}
+            onMarkAsRead={handleMarkAsRead}
+          />
+        ) : (
           <ChatSidebar
             conversations={conversations}
             activeConversationId={activeConversationId}
@@ -309,35 +279,7 @@ export const Chat: React.FC = () => {
             activeFilter={activeFilter}
             onFilterChange={setActiveFilter}
           />
-        </div>
-
-        {/* Right Chat Area */}
-        <div className={cn(
-          "flex-1 h-full flex flex-col min-w-0",
-          !activeConversationId ? "hidden md:flex" : "flex"
-        )}>
-          {activeConversation ? (
-            <ChatArea
-              conversation={activeConversation}
-              messages={activeMessages}
-              onSendMessage={handleSendMessage}
-              onBackToList={() => setActiveConversationId(null)}
-              quickReplies={quickReplies}
-              onOpenQuickRepliesModal={() => setIsQuickRepliesModalOpen(true)}
-              onMarkAsRead={handleMarkAsRead}
-            />
-          ) : (
-            <div className="h-full flex flex-col items-center justify-center p-8 text-center bg-[#070707]">
-              <div className="w-14 h-14 rounded-2xl bg-white/5 flex items-center justify-center text-[#d4af37] mb-3 border border-[#d4af37]/20">
-                <MessageSquare size={28} />
-              </div>
-              <h3 className="text-white font-bold text-sm mb-1">Nenhuma conversa selecionada</h3>
-              <p className="text-neutral-400 text-xs max-w-sm">
-                Selecione um cliente ou membro da equipe ao lado para visualizar o histórico de mensagens e responder.
-              </p>
-            </div>
-          )}
-        </div>
+        )}
       </div>
 
       {/* Quick Replies Modal */}

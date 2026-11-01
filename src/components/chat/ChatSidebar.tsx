@@ -95,7 +95,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   };
 
   return (
-    <div className="w-full md:w-72 lg:w-80 flex flex-col h-full bg-[#0a0a0a] border-r border-[#d4af37]/15">
+    <div className="w-full flex flex-col h-full bg-[#0a0a0a] overflow-hidden">
       {/* Search Header */}
       <div className="p-3 border-b border-white/5 space-y-2">
         <div className="relative">
