@@ -27,7 +27,6 @@ import { getInitialPurchases } from '@/src/services/clientStorage';
 import { getInitialAppointments, getInitialAbsences } from '@/src/services/agendaStorage';
 import { getInitialConversations } from '@/src/services/chatStorage';
 import { getInitialCommissions } from '@/src/services/financialStorage';
-import { SupabaseRLSTest } from '@/src/components/SupabaseRLSTest';
 import { supabase } from '@/src/lib/supabase';
 import { Menu, Search, Bell, LogOut, ShieldCheck, Home, ArrowLeft } from 'lucide-react';
 
@@ -589,9 +588,6 @@ export default function App() {
         onClose={() => setShowAdminAuthModal(false)}
         onLoginSuccess={handleAdminLoginSuccess}
       />
-
-      {/* Componente de Teste e Diagnóstico RLS do Supabase */}
-      <SupabaseRLSTest />
     </div>
   );
 }
