@@ -33,6 +33,8 @@ import { initialProfessionalsList } from '@/src/components/Professionals';
 import { cn } from '@/src/lib/utils';
 import { getInitialChatBranding, ChatBrandingSettings } from '@/src/services/chatBrandingStorage';
 import { ChatAvatar } from '@/src/components/chat/ChatAvatar';
+import { AudioPlayer } from '@/src/components/chat/AudioPlayer';
+import { AudioRecorder } from '@/src/components/chat/AudioRecorder';
 
 interface PublicChatProps {
   onBack?: () => void;
@@ -192,6 +194,34 @@ export const PublicChat: React.FC<PublicChatProps> = ({ onBack, currentClient })
     setInputMessage('');
     setSelectedFile(null);
     setAttachmentPreview(null);
+  };
+
+  const handleSendAudioAttachment = (attachment: ChatAttachment) => {
+    const recipientId = selectedProfessional ? selectedProfessional.id : ADMIN_PARTICIPANT_ID;
+
+    sendMessageDirectly({
+      conversationId: conversationId,
+      senderId: publicClient.id,
+      senderName: publicClient.name,
+      senderRole: 'cliente',
+      recipientId: recipientId,
+      content: '',
+      attachment: attachment,
+      participantDetails: {
+        type: 'cliente',
+        assignedType: selectedProfessional ? 'profissional_direto' : 'recepcao_adm',
+        assignedProfessionalId: selectedProfessional?.id,
+        assignedProfessionalName: selectedProfessional?.name,
+        participantId: publicClient.id,
+        participantName: publicClient.name,
+        participantPhone: publicClient.phone,
+        participantEmail: publicClient.email,
+        participantPhotoUrl: publicClient.photoUrl,
+        participantRoleDescription: selectedProfessional 
+          ? `Cliente c/ ${selectedProfessional.name}` 
+          : 'Cliente Salão Luxe'
+      }
+    });
   };
 
   const handleQuickQuestion = (questionText: string) => {
@@ -377,15 +407,21 @@ export const PublicChat: React.FC<PublicChatProps> = ({ onBack, currentClient })
 
                       {/* Attachment preview if any */}
                       {msg.attachment && (
-                        <div className="mt-2 rounded-xl overflow-hidden border border-black/10">
-                          {msg.attachment.type === 'image' ? (
-                            <img src={msg.attachment.url} alt="Anexo" className="max-h-52 w-full object-cover" />
+                        <div className="mt-2 rounded-xl overflow-hidden">
+                          {msg.attachment.type === 'audio' ? (
+                            <AudioPlayer
+                              src={msg.attachment.url}
+                              duration={msg.attachment.duration}
+                              isFromAdminOrDono={!isFromClient}
+                            />
+                          ) : msg.attachment.type === 'image' ? (
+                            <img src={msg.attachment.url} alt="Anexo" className="max-h-52 w-full object-cover rounded-xl" />
                           ) : (
                             <a
                               href={msg.attachment.url}
                               target="_blank"
                               rel="noreferrer"
-                              className="p-2 bg-black/20 text-xs underline block"
+                              className="p-2 bg-black/20 text-xs underline block rounded-xl"
                             >
                               📎 {msg.attachment.name}
                             </a>
@@ -441,7 +477,7 @@ export const PublicChat: React.FC<PublicChatProps> = ({ onBack, currentClient })
         >
           <label
             htmlFor="chat-file-upload-pub"
-            className="p-2.5 text-neutral-400 hover:text-[#d4af37] bg-white/5 hover:bg-white/10 rounded-xl cursor-pointer transition-colors"
+            className="p-2 text-neutral-400 hover:text-[#d4af37] bg-white/5 hover:bg-white/10 rounded-xl cursor-pointer transition-colors shrink-0"
             title="Anexar foto ou imagem"
           >
             <ImageIcon size={18} />
@@ -453,6 +489,8 @@ export const PublicChat: React.FC<PublicChatProps> = ({ onBack, currentClient })
               className="hidden"
             />
           </label>
+
+          <AudioRecorder onAudioRecorded={handleSendAudioAttachment} />
 
           <input
             type="text"

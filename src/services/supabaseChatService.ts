@@ -308,7 +308,13 @@ export async function sendSupabaseMessage(params: {
   }
 
   try {
-    const snippet = params.content || (params.attachment?.type === 'image' ? '📷 Foto anexada' : '📎 Documento anexado');
+    const snippet = params.content || (
+      params.attachment?.type === 'audio' 
+        ? '🎤 Mensagem de áudio' 
+        : params.attachment?.type === 'image' 
+        ? '📷 Foto anexada' 
+        : '📎 Documento anexado'
+    );
 
     const { data: existingConvData } = await supabase
       .from('chat_conversations')
@@ -456,3 +462,31 @@ export async function handBackSupabaseConversation(conversationId: string) {
     console.warn('Notice handing back conversation in Supabase:', err);
   }
 }
+
+/**
+ * Uploads audio blob to Supabase Storage bucket 'chat-audios'.
+ * Returns public URL on success or null if bucket is unavailable (fallback to Base64).
+ */
+export async function uploadAudioToSupabaseStorage(blob: Blob, fileName: string): Promise<string | null> {
+  try {
+    const bucket = 'chat-audios';
+    const filePath = `audios/${Date.now()}_${fileName}`;
+    
+    const { error } = await supabase.storage.from(bucket).upload(filePath, blob, {
+      contentType: blob.type || 'audio/webm',
+      upsert: true
+    });
+
+    if (error) {
+      console.warn('Notice uploading audio to Supabase Storage (using base64 fallback):', error.message);
+      return null;
+    }
+
+    const { data: publicUrlData } = supabase.storage.from(bucket).getPublicUrl(filePath);
+    return publicUrlData?.publicUrl || null;
+  } catch (err) {
+    console.warn('Exception uploading audio to Supabase Storage (using base64 fallback):', err);
+    return null;
+  }
+}
+

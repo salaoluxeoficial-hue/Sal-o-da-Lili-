@@ -228,3 +228,157 @@ export async function saveProductToSupabase(product: Product): Promise<boolean> 
     return false;
   }
 }
+
+// --- SERVICES ---
+export async function syncServicesFromSupabase(): Promise<any[] | null> {
+  try {
+    const { data, error } = await supabase
+      .from('services')
+      .select('*')
+      .order('name', { ascending: true });
+
+    if (error || !data) return null;
+    return data.map((row: any) => ({
+      id: row.id,
+      name: row.name,
+      category: row.category,
+      price: Number(row.price),
+      duration: Number(row.duration_minutes || row.duration || 30),
+      description: row.description || '',
+    }));
+  } catch (err) {
+    console.warn('Notice syncing services from Supabase:', err);
+    return null;
+  }
+}
+
+export async function saveServiceToSupabase(service: any): Promise<boolean> {
+  try {
+    const row = {
+      id: service.id,
+      name: service.name,
+      category: service.category,
+      price: service.price,
+      duration_minutes: service.duration,
+      description: service.description || null,
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = await supabase.from('services').upsert(row);
+    return !error;
+  } catch (err) {
+    console.warn('Notice saving service to Supabase:', err);
+    return false;
+  }
+}
+
+// --- FINANCIAL TRANSACTIONS ---
+export async function syncFinancialFromSupabase(): Promise<any[] | null> {
+  try {
+    const { data, error } = await supabase
+      .from('financial_transactions')
+      .select('*')
+      .order('date', { ascending: false });
+
+    if (error || !data) return null;
+    return data.map((row: any) => ({
+      id: row.id,
+      description: row.description,
+      type: row.type,
+      category: row.category,
+      amount: Number(row.amount),
+      date: row.date,
+      paymentMethod: row.payment_method,
+      status: row.status || 'concluido',
+      clientId: row.client_id || undefined,
+      professionalId: row.professional_id || undefined,
+    }));
+  } catch (err) {
+    console.warn('Notice syncing financial transactions from Supabase:', err);
+    return null;
+  }
+}
+
+export async function saveFinancialToSupabase(tx: any): Promise<boolean> {
+  try {
+    const row = {
+      id: tx.id,
+      description: tx.description,
+      type: tx.type,
+      category: tx.category,
+      amount: tx.amount,
+      date: tx.date,
+      payment_method: tx.paymentMethod || 'pix',
+      status: tx.status || 'concluido',
+      client_id: tx.clientId || null,
+      professional_id: tx.professionalId || null,
+      updated_at: new Date().toISOString(),
+    };
+    const { error } = await supabase.from('financial_transactions').upsert(row);
+    return !error;
+  } catch (err) {
+    console.warn('Notice saving financial transaction to Supabase:', err);
+    return false;
+  }
+}
+
+// --- DELETE HELPERS ---
+export async function deleteClientFromSupabase(id: string): Promise<boolean> {
+  try {
+    const { error } = await supabase.from('clients').delete().eq('id', id);
+    return !error;
+  } catch (err) {
+    console.warn('Notice deleting client from Supabase:', err);
+    return false;
+  }
+}
+
+export async function deleteProfessionalFromSupabase(id: string): Promise<boolean> {
+  try {
+    const { error } = await supabase.from('professionals').delete().eq('id', id);
+    return !error;
+  } catch (err) {
+    console.warn('Notice deleting professional from Supabase:', err);
+    return false;
+  }
+}
+
+export async function deleteAppointmentFromSupabase(id: string): Promise<boolean> {
+  try {
+    const { error } = await supabase.from('appointments').delete().eq('id', id);
+    return !error;
+  } catch (err) {
+    console.warn('Notice deleting appointment from Supabase:', err);
+    return false;
+  }
+}
+
+export async function deleteProductFromSupabase(id: string): Promise<boolean> {
+  try {
+    const { error } = await supabase.from('products').delete().eq('id', id);
+    return !error;
+  } catch (err) {
+    console.warn('Notice deleting product from Supabase:', err);
+    return false;
+  }
+}
+
+export async function deleteServiceFromSupabase(id: string): Promise<boolean> {
+  try {
+    const { error } = await supabase.from('services').delete().eq('id', id);
+    return !error;
+  } catch (err) {
+    console.warn('Notice deleting service from Supabase:', err);
+    return false;
+  }
+}
+
+export async function deleteFinancialFromSupabase(id: string): Promise<boolean> {
+  try {
+    const { error } = await supabase.from('financial_transactions').delete().eq('id', id);
+    return !error;
+  } catch (err) {
+    console.warn('Notice deleting financial transaction from Supabase:', err);
+    return false;
+  }
+}
+

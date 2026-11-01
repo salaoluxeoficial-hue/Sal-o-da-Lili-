@@ -150,7 +150,7 @@ export default function App() {
           try {
             const { data: authData, error: authError } = await supabase.auth.signInAnonymously();
             if (authError) {
-              console.warn('[Main useEffect Supabase RLS Test] Anonymous auth is disabled in Supabase:', authError.message);
+              console.warn('[Main useEffect Supabase RLS Test] Anonymous auth notice:', authError.message);
             } else {
               user = authData?.user || null;
             }
@@ -163,12 +163,12 @@ export default function App() {
           .select('*', { count: 'exact', head: true });
 
         if (error) {
-          console.error('[Main useEffect Supabase RLS Test] Query chat_conversations failed:', error.message);
+          console.warn('[Main useEffect Supabase RLS Test] Query chat_conversations notice:', error.message);
         } else {
           console.log('[Main useEffect Supabase RLS Test] chat_conversations count query succeeded! Total:', count, 'User:', user?.id);
         }
       } catch (err) {
-        console.error('[Main useEffect Supabase RLS Test] Exception:', err);
+        console.warn('[Main useEffect Supabase RLS Test] Exception:', err);
       }
     }
     testSupabaseRLS();

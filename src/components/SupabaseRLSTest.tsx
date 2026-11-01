@@ -37,7 +37,7 @@ export function SupabaseRLSTest() {
           .select('*', { count: 'exact', head: true });
 
         if (error) {
-          console.error('[Supabase RLS Test] Failed query select count(*) on chat_conversations:', error);
+          console.warn('[Supabase RLS Test] Failed query select count(*) on chat_conversations:', error.message || error);
           if (isMounted) {
             setTestResult({
               status: 'error',
@@ -61,7 +61,7 @@ export function SupabaseRLSTest() {
           }
         }
       } catch (err: any) {
-        console.error('[Supabase RLS Test] Exception while performing count query:', err);
+        console.warn('[Supabase RLS Test] Exception while performing count query:', err);
         if (isMounted) {
           setTestResult({
             status: 'error',

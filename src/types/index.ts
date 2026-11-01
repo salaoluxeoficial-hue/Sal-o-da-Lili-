@@ -371,11 +371,12 @@ export type MessageStatus = 'enviada' | 'entregue' | 'lida';
 
 export interface ChatAttachment {
   id: string;
-  url: string; // data url or image link
+  url: string; // data url or image/audio link
   name: string;
-  type: 'image' | 'file';
+  type: 'image' | 'file' | 'audio';
   sizeFormatted?: string;
   mimeType?: string;
+  duration?: number; // duration in seconds for audio messages
 }
 
 export interface ChatMessage {

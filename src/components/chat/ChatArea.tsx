@@ -37,6 +37,7 @@ import {
 } from '@/src/services/chatStorage';
 import { ChatInput } from './ChatInput';
 import { AttachmentModal } from './AttachmentModal';
+import { AudioPlayer } from './AudioPlayer';
 
 interface ChatAreaProps {
   conversation: ChatConversation;
@@ -425,7 +426,13 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                       {/* Attachment Rendering */}
                       {msg.attachment && (
                         <div className="mb-2">
-                          {msg.attachment.type === 'image' ? (
+                          {msg.attachment.type === 'audio' ? (
+                            <AudioPlayer
+                              src={msg.attachment.url}
+                              duration={msg.attachment.duration}
+                              isFromAdminOrDono={isFromAdminOrDono}
+                            />
+                          ) : msg.attachment.type === 'image' ? (
                             <div 
                               onClick={() => setSelectedAttachment(msg.attachment!)}
                               className="relative cursor-pointer group overflow-hidden rounded-xl border border-white/10 bg-black/40"

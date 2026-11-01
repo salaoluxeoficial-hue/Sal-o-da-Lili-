@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { ChatAttachment, QuickReply, ChatParticipantType } from '@/src/types';
 import { formatFileSize } from '@/src/services/chatStorage';
+import { AudioRecorder } from './AudioRecorder';
 
 interface ChatInputProps {
   onSendMessage: (content: string, attachment?: ChatAttachment) => void;
@@ -230,6 +231,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           >
             <Zap size={18} className={showQuickMenu ? 'text-[#d4af37]' : ''} />
           </button>
+
+          <AudioRecorder
+            onAudioRecorded={(audioAtt) => {
+              onSendMessage('', audioAtt);
+            }}
+          />
         </div>
 
         {/* Text Area */}
