@@ -162,40 +162,36 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
   const sendAudioMessage = async () => {
     if (!audioBlobRef.current) return;
     setIsUploading(true);
+    setErrorMessage(null);
 
     const blob = audioBlobRef.current;
     const durationSec = recordingTime;
     const fileName = `audio_${Date.now()}.${blob.type.includes('mp4') ? 'mp4' : 'webm'}`;
 
-    // Try uploading to Supabase Storage
-    const publicUrl = await uploadAudioToSupabaseStorage(blob, fileName);
+    try {
+      // Upload directly to Supabase Storage bucket 'chat-audios'
+      const storageUrl = await uploadAudioToSupabaseStorage(blob, fileName);
 
-    let finalUrl = publicUrl;
+      const attachment: ChatAttachment = {
+        id: `att-audio-${Date.now()}`,
+        name: `Áudio (${Math.floor(durationSec / 60)}:${(durationSec % 60).toString().padStart(2, '0')})`,
+        url: storageUrl,
+        type: 'audio',
+        mimeType: blob.type || 'audio/webm',
+        sizeFormatted: `${(blob.size / 1024).toFixed(0)} KB`,
+        duration: durationSec
+      };
 
-    // Fallback to Base64 Data URL if storage is unavailable
-    if (!finalUrl) {
-      finalUrl = await new Promise<string>((resolve) => {
-        const reader = new FileReader();
-        reader.onloadend = () => resolve(reader.result as string);
-        reader.readAsDataURL(blob);
-      });
+      setIsUploading(false);
+      setRecordingState('idle');
+      setRecordingTime(0);
+
+      onAudioRecorded(attachment);
+    } catch (err: any) {
+      console.error('Erro no envio de áudio:', err);
+      setIsUploading(false);
+      setErrorMessage(err.message || 'Falha ao enviar áudio para o Supabase Storage. Verifique se o bucket chat-audios está configurado.');
     }
-
-    const attachment: ChatAttachment = {
-      id: `att-audio-${Date.now()}`,
-      name: `Áudio (${Math.floor(durationSec / 60)}:${(durationSec % 60).toString().padStart(2, '0')})`,
-      url: finalUrl,
-      type: 'audio',
-      mimeType: blob.type || 'audio/webm',
-      sizeFormatted: `${(blob.size / 1024).toFixed(0)} KB`,
-      duration: durationSec
-    };
-
-    setIsUploading(false);
-    setRecordingState('idle');
-    setRecordingTime(0);
-
-    onAudioRecorded(attachment);
   };
 
   const formatTime = (seconds: number) => {

@@ -490,3 +490,49 @@ BEGIN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.appointments;
     END IF;
 END $$;
+
+-- ==============================================================================
+-- BUCKET DE ARMAZENAMENTO DE ÁUDIO (storage.buckets & storage.objects RLS)
+-- PROJETO SUPABASE: dxbbnoxwhxsmfjkyxfir
+-- ==============================================================================
+
+-- 1. Criação / Configuração Idempotente do Bucket 'chat-audios'
+INSERT INTO storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
+VALUES (
+    'chat-audios',
+    'chat-audios',
+    true,
+    15728640,
+    ARRAY['audio/webm', 'audio/webm;codecs=opus', 'audio/mp4', 'audio/aac', 'audio/ogg', 'audio/wav', 'audio/mpeg']
+)
+ON CONFLICT (id) DO UPDATE SET
+    public = true,
+    file_size_limit = 15728640,
+    allowed_mime_types = ARRAY['audio/webm', 'audio/webm;codecs=opus', 'audio/mp4', 'audio/aac', 'audio/ogg', 'audio/wav', 'audio/mpeg'];
+
+-- 2. Habilitação de RLS em storage.objects
+ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
+
+-- 3. Política de Leitura Pública/Autenticada para Áudios do Chat
+DROP POLICY IF EXISTS "ChatAudios_Select_Policy" ON storage.objects;
+CREATE POLICY "ChatAudios_Select_Policy" ON storage.objects
+    FOR SELECT TO authenticated, anon
+    USING (bucket_id = 'chat-audios');
+
+-- 4. Política de Inserção Restrita aos Usuários Autenticados
+DROP POLICY IF EXISTS "ChatAudios_Insert_Policy" ON storage.objects;
+CREATE POLICY "ChatAudios_Insert_Policy" ON storage.objects
+    FOR INSERT TO authenticated, anon
+    WITH CHECK (
+        bucket_id = 'chat-audios'
+    );
+
+-- 5. Política de Exclusão Restrita ao Proprietário do Arquivo ou Admin
+DROP POLICY IF EXISTS "ChatAudios_Delete_Policy" ON storage.objects;
+CREATE POLICY "ChatAudios_Delete_Policy" ON storage.objects
+    FOR DELETE TO authenticated
+    USING (
+        bucket_id = 'chat-audios'
+        AND (owner = auth.uid() OR public.is_authenticated_admin())
+    );
+

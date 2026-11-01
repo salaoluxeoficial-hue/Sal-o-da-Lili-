@@ -503,40 +503,35 @@ export default function App() {
   // --------------------------------------------------------------------------
   return (
     <div className="min-h-screen bg-[#050505] text-white flex flex-col relative pb-24">
-      {/* Header da Área Pública */}
-      <header className="sticky top-0 z-30 bg-[#080808]/90 backdrop-blur-md border-b border-[#d4af37]/20 px-4 sm:px-8 py-3.5 flex items-center justify-between shadow-lg">
-        <div className="flex items-center gap-3">
+      {/* Header da Área Pública Elegante */}
+      <header className="sticky top-0 z-30 bg-[#080808]/90 backdrop-blur-md border-b border-white/5 px-4 sm:px-10 py-3.5 flex items-center justify-between">
+        <div className="flex items-center gap-3.5">
           <button
             onClick={() => setIsPublicSidebarOpen(true)}
-            className="p-2 hover:bg-white/5 rounded-xl text-[#d4af37] transition-colors border border-[#d4af37]/30"
-            title="Abrir Menu Lateral"
+            className="p-2 hover:bg-white/5 rounded-xl text-neutral-300 hover:text-white transition-colors border border-white/10"
+            title="Abrir Menu"
           >
-            <Menu size={22} />
+            <Menu size={20} />
           </button>
-          <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#d4af37] to-[#8a7122] flex items-center justify-center text-black font-extrabold text-sm shadow-md shadow-[#d4af37]/20">
-            SL
-          </div>
-          <div>
-            <span className="text-[#d4af37] font-extrabold text-base sm:text-lg tracking-wider block leading-tight">
+          <div className="flex items-center gap-2.5 cursor-pointer" onClick={() => setCurrentPublicView('dashboard')}>
+            <div className="w-8 h-8 rounded-lg bg-[#d4af37] flex items-center justify-center text-black font-bold text-xs tracking-wider">
+              SL
+            </div>
+            <span className="text-[#d4af37] font-medium text-sm sm:text-base tracking-[0.2em] uppercase block">
               SALÃO LUXE
-            </span>
-            <span className="text-[10px] text-neutral-400 uppercase tracking-widest block font-medium">
-              Unissex & Estética VIP
             </span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <button 
             onClick={() => setCurrentPublicView('chat')}
-            className="relative p-2.5 text-neutral-400 hover:text-[#d4af37] hover:bg-white/5 rounded-xl transition-all"
-            title="Atendimento e Mensagens"
+            className="p-2 text-neutral-400 hover:text-[#d4af37] hover:bg-white/5 rounded-xl transition-all relative"
+            title="Atendimento"
           >
-            <Bell size={20} />
+            <Bell size={18} />
             {totalUnreadChat > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 px-1.5 py-0.2 bg-rose-500 text-white text-[10px] font-bold rounded-full border-2 border-[#050505]">
-                {totalUnreadChat}
-              </span>
+              <span className="absolute top-1 right-1 w-2 h-2 bg-[#d4af37] rounded-full" />
             )}
           </button>
         </div>

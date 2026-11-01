@@ -282,7 +282,13 @@ export function sendMessageDirectly(params: {
   localStorage.setItem('chat_messages', JSON.stringify(updatedMsgs));
 
   const currentConvs = getStoredConversationsRaw();
-  const snippet = params.content || (params.attachment?.type === 'image' ? '📷 Foto anexada' : '📎 Documento anexado');
+  const snippet = params.content || (
+    params.attachment?.type === 'audio'
+      ? '🎤 Mensagem de áudio'
+      : params.attachment?.type === 'image'
+      ? '📷 Foto anexada'
+      : '📎 Documento anexado'
+  );
 
   const existingIdx = currentConvs.findIndex(c => c.id === params.conversationId);
   let updatedConvs: ChatConversation[] = [];

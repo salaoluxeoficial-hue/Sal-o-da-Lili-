@@ -1,320 +1,283 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Sparkles, X, Send, Bot, ChevronRight } from 'lucide-react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { X, Send, Headphones, CheckCheck } from 'lucide-react';
 import { useLocalStorage } from '@/src/hooks/useLocalStorage';
-import { Service, Product, PixConfig, ViewType } from '@/src/types';
-import { initialServicesList } from '@/src/components/Services';
-import { getInitialProducts } from '@/src/services/productStorage';
-import { formatCurrency } from '@/src/lib/utils';
-import { getInitialChatBranding, ChatBrandingSettings } from '@/src/services/chatBrandingStorage';
-import { ChatAvatar } from '@/src/components/chat/ChatAvatar';
-
-export interface SalonSettings {
-  salonName: string;
-  phone: string;
-  whatsapp: string;
-  email: string;
-  address: string;
-  openingHours: string;
-  pixKey: string;
-  receiverName: string;
-  city: string;
-}
+import { ViewType, ChatMessage, ChatAttachment, ChatConversation } from '@/src/types';
+import { AudioRecorder } from '@/src/components/chat/AudioRecorder';
+import { AudioPlayer } from '@/src/components/chat/AudioPlayer';
+import { 
+  ADMIN_PARTICIPANT_ID, 
+  sendMessageDirectly, 
+  getStoredMessages, 
+  markConversationAsReadDirectly 
+} from '@/src/services/chatStorage';
+import { getOrCreatePersistentClientUUID } from '@/src/services/supabaseChatService';
 
 interface AIAssistantButtonProps {
   onNavigate?: (view: ViewType) => void;
 }
 
-interface Message {
-  id: string;
-  sender: 'ai' | 'user';
-  text: string;
-  time: string;
-  action?: {
-    label: string;
-    view: ViewType;
-  };
-}
-
-export const AIAssistantButton: React.FC<AIAssistantButtonProps> = ({ onNavigate }) => {
+export const AIAssistantButton: React.FC<AIAssistantButtonProps> = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
-  const [branding, setBranding] = useState<ChatBrandingSettings>(() => getInitialChatBranding());
 
+  // Persistent Client UUID for visitor identification
+  const visitorId = useMemo(() => getOrCreatePersistentClientUUID(), []);
+  const visitorName = 'Visitante Luxe';
+  const conversationId = `conv-client-${visitorId}`;
+
+  // Shared chat messages and conversations state from localStorage
+  const [storedMessages, setStoredMessages] = useLocalStorage<ChatMessage[]>('chat_messages', getStoredMessages());
+  const [storedConvs, setStoredConvs] = useLocalStorage<ChatConversation[]>('chat_conversations', []);
+
+  // Listen to real-time chat updates
   useEffect(() => {
-    const handleBrandingSync = () => {
-      setBranding(getInitialChatBranding());
+    const handleSync = () => {
+      try {
+        const rawMsgs = localStorage.getItem('chat_messages');
+        if (rawMsgs) setStoredMessages(JSON.parse(rawMsgs));
+        const rawConvs = localStorage.getItem('chat_conversations');
+        if (rawConvs) setStoredConvs(JSON.parse(rawConvs));
+      } catch (err) {
+        console.error('AIAssistantButton sync error:', err);
+      }
     };
-    window.addEventListener('salao-luxe-branding-sync', handleBrandingSync);
-    window.addEventListener('storage', handleBrandingSync);
-    return () => {
-      window.removeEventListener('salao-luxe-branding-sync', handleBrandingSync);
-      window.removeEventListener('storage', handleBrandingSync);
-    };
-  }, []);
 
-  const [services] = useLocalStorage<Service[]>('services', initialServicesList);
-  const [products] = useLocalStorage<Product[]>('products', getInitialProducts());
-  const [settings] = useLocalStorage<SalonSettings>('salon_settings', {
-    salonName: 'Salão Luxe',
-    phone: '(11) 99999-8888',
-    whatsapp: '(11) 99999-8888',
-    email: 'contato@salaoluxe.com',
-    address: 'Av. Paulista, 1000 - São Paulo, SP',
-    openingHours: 'Terça a Sábado das 09h às 20h',
-    pixKey: '12345678000195',
-    receiverName: 'Salão Luxe LTDA',
-    city: 'São Paulo'
-  });
-  const [pixConfig] = useLocalStorage<PixConfig>('pix_config', {
-    keyType: 'cnpj',
-    key: '12345678000195',
-    receiverName: 'Salão Luxe LTDA',
-    receiverCity: 'São Paulo',
-    gatewayProvider: 'manual',
-    autoWebhookEnabled: true,
-    webhookSecret: 'whsec_luxe_live',
-    webhookEndpoint: 'https://api.salaoluxe.com/webhooks/pix'
-  });
+    window.addEventListener('salao-luxe-chat-sync', handleSync);
+    window.addEventListener('storage', handleSync);
+    return () => {
+      window.removeEventListener('salao-luxe-chat-sync', handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
+  }, [setStoredMessages, setStoredConvs]);
+
+  // Filter messages specifically belonging to this visitor conversation
+  const liveChatMessages = useMemo(() => {
+    return storedMessages
+      .filter(m => m.conversationId === conversationId)
+      .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+  }, [storedMessages, conversationId]);
+
+  // Mark messages as read when balloon is open
+  useEffect(() => {
+    if (isOpen && conversationId) {
+      markConversationAsReadDirectly(conversationId, 'participant');
+    }
+  }, [isOpen, conversationId, liveChatMessages.length]);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
 
-  const [messages, setMessages] = useState<Message[]>([
-    {
-      id: '1',
-      sender: 'ai',
-      text: `Olá! Sou a Assistente IA do Salão Luxe. Como posso ajudar você hoje?`,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    }
-  ]);
-
+  // Auto-scroll on new messages
   useEffect(() => {
     if (isOpen) {
       chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages, isOpen]);
+  }, [liveChatMessages, isOpen]);
 
-  const handleQuickQuestion = (question: string) => {
-    processUserInput(question);
+  // Send audio message recorded in floating balloon widget
+  const handleSendAudioAttachment = (attachment: ChatAttachment) => {
+    sendMessageDirectly({
+      conversationId,
+      senderId: visitorId,
+      senderName: visitorName,
+      senderRole: 'cliente',
+      recipientId: ADMIN_PARTICIPANT_ID,
+      content: '',
+      attachment: attachment,
+      participantDetails: {
+        type: 'cliente',
+        assignedType: 'recepcao_adm',
+        participantId: visitorId,
+        participantName: visitorName,
+        participantRoleDescription: 'Cliente Visitante (Balão Flutuante)'
+      }
+    });
   };
 
-  const processUserInput = (userInputText: string) => {
-    const text = userInputText.trim();
+  // Send text message in floating balloon widget
+  const handleSendTextMessage = () => {
+    const text = input.trim();
     if (!text) return;
 
-    const userMsg: Message = {
-      id: Date.now().toString(),
-      sender: 'user',
-      text: text,
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-    };
-
-    setMessages(prev => [...prev, userMsg]);
-    setInput('');
-
-    // Generate intelligent contextual response
-    setTimeout(() => {
-      let responseText = '';
-      let action: { label: string; view: ViewType } | undefined;
-
-      const lower = text.toLowerCase();
-
-      if (lower.includes('agendar') || lower.includes('reserva') || lower.includes('horário') || lower.includes('agendamento')) {
-        const topServices = services.slice(0, 3).map(s => `• ${s.name} (${formatCurrency(s.price)})`).join('\n');
-        responseText = `Você pode realizar seu agendamento diretamente na Área do Cliente ou na Vitrine de Serviços!\n\nServiços mais procurados:\n${topServices}`;
-        action = { label: 'Ir para Área do Cliente', view: 'area_cliente' };
-      } else if (lower.includes('humano') || lower.includes('atendente') || lower.includes('recepção') || lower.includes('recepcao') || lower.includes('falar com pessoa')) {
-        responseText = `Você está sendo direcionado para o chat de atendimento humano do Salão Luxe. Nossa recepção e gerência estão prontas para atendê-lo!`;
-        action = { label: 'Transferir para Atendimento Humano', view: 'chat' };
-      } else if (lower.includes('pix') || lower.includes('pagamento') || lower.includes('pagar') || lower.includes('chave')) {
-        const key = pixConfig.key || settings.pixKey || '12345678000195';
-        const receiver = pixConfig.receiverName || settings.receiverName || 'Salão Luxe';
-        responseText = `Chave Pix Oficial do Salão Luxe:\n\n• Chave: ${key}\n• Recebedor: ${receiver}\n• Cidade: ${pixConfig.receiverCity || 'São Paulo'}\n\nApós realizar a transferência Pix, o seu comprovante é validado automaticamente no sistema!`;
-        action = { label: 'Ver Vitrine & Sacola', view: 'vitrine' };
-      } else if (lower.includes('produto') || lower.includes('shampoo') || lower.includes('comprar') || lower.includes('estoque')) {
-        const topProducts = products.filter(p => p.status === 'ativo').slice(0, 3).map(p => `• ${p.name} - ${formatCurrency(p.price)}`).join('\n');
-        responseText = `Confira os produtos de alta performance disponíveis em nosso estoque:\n\n${topProducts}\n\nVocê pode adicionar os produtos à sacola na Vitrine Digital ou em Produtos!`;
-        action = { label: 'Abrir Vitrine', view: 'vitrine' };
-      } else if (lower.includes('contato') || lower.includes('whatsapp') || lower.includes('telefone') || lower.includes('endereço')) {
-        responseText = `Informações de Contato e Localização do Salão Luxe:\n\n• WhatsApp: ${settings.whatsapp}\n• Telefone: ${settings.phone}\n• Endereço: ${settings.address}\n• Horário: ${settings.openingHours}`;
-        action = { label: 'Atendimento via Chat', view: 'chat' };
-      } else if (lower.includes('serviço') || lower.includes('preço') || lower.includes('valor')) {
-        const list = services.slice(0, 4).map(s => `• ${s.name}: ${formatCurrency(s.price)} (${s.duration} min)`).join('\n');
-        responseText = `Tabela principal de serviços do Salão Luxe:\n\n${list}\n\nAtendemos cabelo, barba, estética e unhas com profissionais renomados.`;
-        action = { label: 'Ver Todos na Vitrine', view: 'vitrine' };
-      } else {
-        responseText = `Entendido! No Salão Luxe você conta com serviços de beleza de alto padrão, vitrine de produtos e agendamento online imediato.\n\nComo deseja prosseguir?`;
-        action = { label: 'Falar com Atendente Humano', view: 'chat' };
+    sendMessageDirectly({
+      conversationId,
+      senderId: visitorId,
+      senderName: visitorName,
+      senderRole: 'cliente',
+      recipientId: ADMIN_PARTICIPANT_ID,
+      content: text,
+      participantDetails: {
+        type: 'cliente',
+        assignedType: 'recepcao_adm',
+        participantId: visitorId,
+        participantName: visitorName,
+        participantRoleDescription: 'Cliente Visitante (Balão Flutuante)'
       }
+    });
 
-      const aiMsg: Message = {
-        id: (Date.now() + 1).toString(),
-        sender: 'ai',
-        text: responseText,
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-        action
-      };
-
-      setMessages(prev => [...prev, aiMsg]);
-    }, 400);
+    setInput('');
   };
+
+  const unreadCount = useMemo(() => {
+    const conv = storedConvs.find(c => c.id === conversationId);
+    return conv?.unreadCountParticipant || 0;
+  }, [storedConvs, conversationId]);
 
   return (
     <>
-      {/* Floating Button */}
+      {/* Botão Flutuante Minimalista & Sofisticado */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-20 sm:bottom-24 right-4 sm:right-6 z-50 group flex items-center gap-2.5 bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#b8860b] text-black font-extrabold px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-full shadow-[0_0_20px_rgba(212,175,55,0.4)] hover:shadow-[0_0_30px_rgba(212,175,55,0.7)] hover:scale-105 active:scale-95 transition-all duration-300 border border-[#fff8dc]"
-        title={branding.aiAssistant.name}
+        className="fixed bottom-20 sm:bottom-24 right-4 sm:right-6 z-50 flex items-center gap-2 bg-[#0c0c0c] text-white border border-[#c5a059]/40 px-4 py-3 rounded-full shadow-2xl hover:border-[#c5a059] hover:scale-105 active:scale-95 transition-all duration-300 relative group"
+        title="Atendimento Salão Luxe"
       >
-        <ChatAvatar 
-          config={branding.aiAssistant} 
-          type="ai" 
-          size="sm" 
-          showStatusIndicator={false} 
-        />
-        <span className="text-xs tracking-wider uppercase hidden sm:inline-block font-extrabold text-black">
-          {branding.aiAssistant.name}
+        <div className="w-6 h-6 rounded-full bg-[#c5a059]/20 flex items-center justify-center text-[#c5a059]">
+          <Headphones size={13} />
+        </div>
+        <span className="text-xs font-light tracking-wide text-neutral-200 hidden sm:inline-block">
+          Atendimento
         </span>
+
+        {unreadCount > 0 && (
+          <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#c5a059] text-black rounded-full text-[10px] font-bold flex items-center justify-center border-2 border-black">
+            {unreadCount}
+          </span>
+        )}
       </button>
 
-      {/* Floating Chat Modal - Compact & Standardized */}
+      {/* Modal do Balão Flutuante Compacto & Sofisticado */}
       {isOpen && (
-        <div className="fixed bottom-20 sm:bottom-24 right-3 sm:right-6 z-50 w-[92vw] sm:w-[350px] md:w-[360px] h-[430px] max-h-[75vh] bg-[#0a0a0a] border border-[#d4af37]/30 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-5 duration-300">
-          {/* Header */}
-          <div className="bg-gradient-to-r from-[#121212] via-[#1a1710] to-[#121212] border-b border-[#d4af37]/20 p-3.5 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-2.5 min-w-0">
-              <ChatAvatar 
-                config={branding.aiAssistant} 
-                type="ai" 
-                size="md" 
-              />
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  <h3 className="text-xs sm:text-sm font-bold text-white truncate">
-                    {branding.aiAssistant.name}
-                  </h3>
-                  <span className="flex items-center gap-1 text-[9px] bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 px-1.5 py-0.5 rounded-full font-bold uppercase shrink-0">
-                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                    {branding.aiAssistant.onlineStatusText || 'Disponível'}
-                  </span>
-                </div>
-                <p className="text-[10px] sm:text-[11px] text-neutral-400 truncate mt-0.5">{branding.aiAssistant.subtitle}</p>
+        <div className="fixed bottom-20 sm:bottom-24 right-3 sm:right-6 z-50 w-[90vw] sm:w-[350px] md:w-[360px] h-[450px] max-h-[75vh] bg-[#080808] border border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
+          
+          {/* Cabeçalho Discreto */}
+          <div className="bg-[#0c0c0c] border-b border-white/5 p-4 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="w-2.5 h-2.5 rounded-full bg-[#c5a059]" />
+              <div>
+                <h3 className="text-xs sm:text-sm font-medium text-white">
+                  Atendimento Salão Luxe
+                </h3>
+                <p className="text-[10px] text-neutral-400 font-light mt-0.5">
+                  Recepção & Mensagens
+                </p>
               </div>
             </div>
+
             <button
               onClick={() => setIsOpen(false)}
-              className="p-1.5 text-neutral-400 hover:text-white hover:bg-white/10 rounded-xl transition-colors shrink-0"
+              className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors shrink-0"
               title="Fechar"
             >
-              <X size={18} />
+              <X size={16} />
             </button>
           </div>
 
-          {/* Quick Prompt Chips */}
-          <div className="p-2 bg-[#121212] border-b border-white/5 flex items-center gap-1.5 overflow-x-auto no-scrollbar text-xs shrink-0">
-            <button
-              onClick={() => handleQuickQuestion('Quero falar com atendimento humano')}
-              className="whitespace-nowrap px-2.5 py-1 bg-[#d4af37]/20 hover:bg-[#d4af37] text-[#d4af37] hover:text-black border border-[#d4af37]/40 text-neutral-300 rounded-full transition-all text-[11px] font-bold"
-            >
-              👤 Atendente Humano
-            </button>
-            <button
-              onClick={() => handleQuickQuestion('Quais os serviços mais procurados?')}
-              className="whitespace-nowrap px-2.5 py-1 bg-white/5 hover:bg-[#d4af37]/20 hover:text-[#d4af37] border border-white/10 hover:border-[#d4af37]/30 text-neutral-300 rounded-full transition-all text-[11px]"
-            >
-              ✂️ Serviços
-            </button>
-            <button
-              onClick={() => handleQuickQuestion('Como fazer um agendamento?')}
-              className="whitespace-nowrap px-2.5 py-1 bg-white/5 hover:bg-[#d4af37]/20 hover:text-[#d4af37] border border-white/10 hover:border-[#d4af37]/30 text-neutral-300 rounded-full transition-all text-[11px]"
-            >
-              📅 Agendar
-            </button>
-            <button
-              onClick={() => handleQuickQuestion('Qual a chave Pix do salão?')}
-              className="whitespace-nowrap px-2.5 py-1 bg-white/5 hover:bg-[#d4af37]/20 hover:text-[#d4af37] border border-white/10 hover:border-[#d4af37]/30 text-neutral-300 rounded-full transition-all text-[11px]"
-            >
-              🔑 Pix
-            </button>
-            <button
-              onClick={() => handleQuickQuestion('Produtos em estoque')}
-              className="whitespace-nowrap px-2.5 py-1 bg-white/5 hover:bg-[#d4af37]/20 hover:text-[#d4af37] border border-white/10 hover:border-[#d4af37]/30 text-neutral-300 rounded-full transition-all text-[11px]"
-            >
-              🛍️ Produtos
-            </button>
-          </div>
-
-          {/* Messages Container - Clean flex-1 */}
-          <div className="flex-1 p-3.5 overflow-y-auto space-y-3 min-h-0">
-            {messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={`flex flex-col ${msg.sender === 'user' ? 'items-end' : 'items-start'}`}
-              >
-                <div className="flex items-end gap-2 max-w-[85%]">
-                  {msg.sender === 'ai' && (
-                    <div className="shrink-0 mb-0.5">
-                      <ChatAvatar config={branding.aiAssistant} type="ai" size="sm" showStatusIndicator={false} />
-                    </div>
-                  )}
-
-                  <div
-                    className={`p-3 rounded-2xl text-xs leading-relaxed whitespace-pre-wrap ${
-                      msg.sender === 'user'
-                        ? 'text-black font-semibold rounded-br-none shadow-sm'
-                        : 'bg-[#161616] border border-white/10 text-neutral-200 rounded-bl-none'
-                    }`}
-                    style={msg.sender === 'user' ? { backgroundColor: branding.aiAssistant.accentColor || '#d4af37' } : undefined}
-                  >
-                    {msg.text}
-
-                    {/* Action Button inside AI message */}
-                    {msg.action && onNavigate && (
-                      <button
-                        onClick={() => {
-                          onNavigate(msg.action!.view);
-                          setIsOpen(false);
-                        }}
-                        className="mt-2.5 w-full flex items-center justify-between gap-1.5 px-3 py-1.5 bg-[#d4af37]/20 hover:bg-[#d4af37] text-[#d4af37] hover:text-black border border-[#d4af37]/40 rounded-xl font-bold transition-all text-[11px]"
-                      >
-                        <span>{msg.action.label}</span>
-                        <ChevronRight size={14} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                <span className="text-[9px] text-neutral-500 mt-1 px-1">
-                  {msg.time}
+          {/* Conversa Limpa */}
+          <div className="flex-1 p-4 overflow-y-auto space-y-3.5 min-h-0 bg-[#050505]">
+            {liveChatMessages.length === 0 ? (
+              <div className="h-full flex flex-col items-center justify-center text-center p-4 space-y-2">
+                <span className="text-[11px] text-[#c5a059] font-medium tracking-wider uppercase">
+                  Canal Direto
                 </span>
+                <p className="text-neutral-400 text-xs font-light max-w-xs leading-relaxed">
+                  Digite sua dúvida ou grave um áudio para falar com o Salão Luxe.
+                </p>
               </div>
-            ))}
+            ) : (
+              liveChatMessages.map((msg) => {
+                const isFromClient = msg.senderRole === 'cliente' || msg.senderId === visitorId;
+                const isAudio = msg.attachment?.type === 'audio';
+
+                return (
+                  <div
+                    key={msg.id}
+                    className={`flex flex-col ${isFromClient ? 'items-end' : 'items-start'}`}
+                  >
+                    <div className="max-w-[88%] space-y-1">
+                      <div
+                        className={`p-3 rounded-2xl text-xs font-light leading-relaxed ${
+                          isFromClient
+                            ? 'bg-[#d4af37] text-black font-medium rounded-br-none shadow-sm'
+                            : 'bg-[#141414] border border-white/5 text-neutral-200 rounded-bl-none'
+                        }`}
+                      >
+                        {isAudio && msg.attachment ? (
+                          <AudioPlayer
+                            src={msg.attachment.url}
+                            duration={msg.attachment.duration}
+                            isFromAdminOrDono={!isFromClient}
+                          />
+                        ) : msg.attachment?.type === 'image' ? (
+                          <img 
+                            src={msg.attachment.url} 
+                            alt="Anexo" 
+                            className="max-h-40 w-full object-cover rounded-xl mb-1" 
+                          />
+                        ) : msg.attachment ? (
+                          <a
+                            href={msg.attachment.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="p-2 bg-black/20 text-xs underline block rounded-xl mb-1"
+                          >
+                            📎 {msg.attachment.name}
+                          </a>
+                        ) : null}
+
+                        {msg.content && (
+                          <p className={isAudio ? 'mt-1' : ''}>{msg.content}</p>
+                        )}
+                      </div>
+
+                      <div className="flex items-center justify-end gap-1 text-[9px] text-neutral-500 px-1">
+                        <span>
+                          {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                        {isFromClient && (
+                          <CheckCheck 
+                            size={11} 
+                            className={msg.status === 'lida' ? 'text-emerald-400' : 'text-neutral-500'} 
+                          />
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })
+            )}
             <div ref={chatEndRef} />
           </div>
 
-          {/* Input Box */}
+          {/* Campo de Mensagem Elegante */}
           <form
             onSubmit={(e) => {
               e.preventDefault();
-              processUserInput(input);
+              handleSendTextMessage();
             }}
-            className="p-2.5 bg-[#101010] border-t border-white/10 flex items-center gap-2 shrink-0"
+            className="p-3 bg-[#0c0c0c] border-t border-white/5 flex items-center gap-2 shrink-0"
           >
+            {/* Botão de Microfone Minimalista */}
+            <AudioRecorder
+              onAudioRecorded={handleSendAudioAttachment}
+              isCompact={true}
+            />
+
+            {/* Input de Texto */}
             <input
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Digite sua dúvida..."
-              className="flex-1 bg-white/5 border border-white/10 focus:border-[#d4af37]/50 text-white rounded-xl px-3 py-2 text-xs outline-none placeholder:text-neutral-500 transition-all"
+              placeholder="Digite sua mensagem..."
+              className="flex-1 bg-[#141414] border border-white/10 focus:border-[#c5a059] text-white rounded-xl px-3 py-2 text-xs outline-none placeholder:text-neutral-500 font-light transition-all"
             />
+
+            {/* Botão de Envio Minimalista */}
             <button
               type="submit"
               disabled={!input.trim()}
-              className="p-2 disabled:opacity-40 text-black font-bold rounded-xl transition-all shadow-sm"
-              style={{ backgroundColor: branding.aiAssistant.accentColor || '#d4af37' }}
+              className="p-2 bg-[#d4af37] hover:bg-[#e5c158] disabled:opacity-30 text-black font-semibold rounded-xl transition-all shadow-md shrink-0"
               title="Enviar"
             >
-              <Send size={15} />
+              <Send size={14} />
             </button>
           </form>
         </div>

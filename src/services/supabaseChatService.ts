@@ -465,28 +465,42 @@ export async function handBackSupabaseConversation(conversationId: string) {
 
 /**
  * Uploads audio blob to Supabase Storage bucket 'chat-audios'.
- * Returns public URL on success or null if bucket is unavailable (fallback to Base64).
+ * Ensures an authenticated session exists, uploads the binary file to Storage,
+ * and returns the Storage public URL or signed URL.
+ * Strictly avoids saving permanent Base64 strings.
  */
-export async function uploadAudioToSupabaseStorage(blob: Blob, fileName: string): Promise<string | null> {
-  try {
-    const bucket = 'chat-audios';
-    const filePath = `audios/${Date.now()}_${fileName}`;
-    
-    const { error } = await supabase.storage.from(bucket).upload(filePath, blob, {
-      contentType: blob.type || 'audio/webm',
-      upsert: true
-    });
-
-    if (error) {
-      console.warn('Notice uploading audio to Supabase Storage (using base64 fallback):', error.message);
-      return null;
-    }
-
-    const { data: publicUrlData } = supabase.storage.from(bucket).getPublicUrl(filePath);
-    return publicUrlData?.publicUrl || null;
-  } catch (err) {
-    console.warn('Exception uploading audio to Supabase Storage (using base64 fallback):', err);
-    return null;
+export async function uploadAudioToSupabaseStorage(blob: Blob, fileName: string): Promise<string> {
+  const authUserId = await ensureAuthenticatedSession();
+  if (!authUserId) {
+    console.warn('Alerta: Enviando áudio sem sessão ativa de auth.uid().');
   }
+
+  const bucket = 'chat-audios';
+  const filePath = `audios/${Date.now()}_${fileName}`;
+  
+  const { error } = await supabase.storage.from(bucket).upload(filePath, blob, {
+    contentType: blob.type || 'audio/webm',
+    upsert: true
+  });
+
+  if (error) {
+    console.error('Erro no upload de áudio para o Supabase Storage:', error.message);
+    throw new Error(`Upload falhou no Supabase Storage: ${error.message}`);
+  }
+
+  const { data: publicUrlData } = supabase.storage.from(bucket).getPublicUrl(filePath);
+  if (publicUrlData?.publicUrl) {
+    return publicUrlData.publicUrl;
+  }
+
+  const { data: signedData, error: signedErr } = await supabase.storage
+    .from(bucket)
+    .createSignedUrl(filePath, 60 * 60 * 24 * 365);
+
+  if (signedErr || !signedData?.signedUrl) {
+    throw new Error('Não foi possível gerar a URL de acesso do áudio no Supabase Storage.');
+  }
+
+  return signedData.signedUrl;
 }
 
