@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { User } from '@supabase/supabase-js';
 import { Sidebar } from '@/src/components/Sidebar';
 import { Dashboard } from '@/src/components/Dashboard';
 import { PublicHome } from '@/src/components/public/PublicHome';
@@ -33,7 +34,9 @@ import { Menu, Search, Bell, LogOut, ShieldCheck, Home, ArrowLeft } from 'lucide
 export default function App() {
   // Area separation state: 'publica' vs 'administrativa'
   const [isAdminMode, setIsAdminMode] = useState(false);
-  const [isAdminAuthenticated, setIsAdminAuthenticated] = useLocalStorage<boolean>('admin_authenticated_session', false);
+  const [sessionUser, setSessionUser] = useState<User | null>(null);
+  const [userRole, setUserRole] = useState<string | null>(null);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(false);
   const [showAdminAuthModal, setShowAdminAuthModal] = useState(false);
 
   // Active view states
@@ -59,6 +62,68 @@ export default function App() {
     getInitialConversations(initialClientsList, initialProfessionalsList)
   );
 
+  // Supabase Auth session & user role synchronization
+  useEffect(() => {
+    let isMounted = true;
+
+    async function checkUserSessionRole(user: User | null) {
+      if (!user) {
+        if (isMounted) {
+          setSessionUser(null);
+          setUserRole(null);
+          setIsAdminAuthenticated(false);
+          setIsAdminMode(false);
+        }
+        return;
+      }
+
+      if (isMounted) {
+        setSessionUser(user);
+      }
+
+      try {
+        const { data: roleData } = await supabase
+          .from('user_roles')
+          .select('role')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        const role = roleData?.role || null;
+        const isAdmin = role === 'admin';
+
+        if (isMounted) {
+          setUserRole(role);
+          setIsAdminAuthenticated(isAdmin);
+          if (!isAdmin) {
+            setIsAdminMode(false);
+          }
+        }
+      } catch (err) {
+        console.error('[Supabase Auth] Erro ao carregar função do usuário:', err);
+        if (isMounted) {
+          setUserRole(null);
+          setIsAdminAuthenticated(false);
+          setIsAdminMode(false);
+        }
+      }
+    }
+
+    // 1. Initial session load
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      checkUserSessionRole(session?.user || null);
+    });
+
+    // 2. Auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      checkUserSessionRole(session?.user || null);
+    });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
   useEffect(() => {
     const handleChatSync = () => {
       try {
@@ -76,14 +141,22 @@ export default function App() {
     };
   }, [setChatConversations]);
 
-  // Main useEffect RLS test query for chat_conversations count
+  // RLS test query for chat_conversations count
   useEffect(() => {
     async function testSupabaseRLS() {
       try {
         let { data: { user } } = await supabase.auth.getUser();
         if (!user) {
-          const { data: authData } = await supabase.auth.signInAnonymously();
-          user = authData?.user || null;
+          try {
+            const { data: authData, error: authError } = await supabase.auth.signInAnonymously();
+            if (authError) {
+              console.warn('[Main useEffect Supabase RLS Test] Anonymous auth is disabled in Supabase:', authError.message);
+            } else {
+              user = authData?.user || null;
+            }
+          } catch (anonErr) {
+            console.warn('[Main useEffect Supabase RLS Test] Anonymous auth exception:', anonErr);
+          }
         }
         const { count, error } = await supabase
           .from('chat_conversations')
@@ -126,9 +199,16 @@ export default function App() {
     setIsAdminMode(true);
   };
 
-  const handleAdminLogout = () => {
+  const handleAdminLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+    } catch (e) {
+      console.error('Erro ao encerrar sessão Supabase Auth:', e);
+    }
     setIsAdminAuthenticated(false);
     setIsAdminMode(false);
+    setSessionUser(null);
+    setUserRole(null);
     setCurrentPublicView('dashboard');
   };
 
@@ -357,7 +437,7 @@ export default function App() {
               {/* Badge de Área protegida */}
               <div className="hidden lg:flex items-center gap-2 px-3 py-1 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/30 text-[#d4af37] text-xs font-bold uppercase tracking-wider">
                 <ShieldCheck size={14} />
-                Painel Restrito Admin
+                <span>{sessionUser?.email || 'Admin Autenticado'}</span>
               </div>
 
               <button 
@@ -378,8 +458,8 @@ export default function App() {
               {/* Botão de Encerrar Sessão do Admin */}
               <button
                 onClick={handleAdminLogout}
-                className="flex items-center gap-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm"
-                title="Sair do Painel e Encerrar Sessão"
+                className="flex items-center gap-2 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 px-3.5 py-2 rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer"
+                title="Sair do Painel e Encerrar Sessão no Supabase Auth"
               >
                 <LogOut size={16} />
                 <span className="hidden sm:inline">Sair do Admin</span>
@@ -487,7 +567,7 @@ export default function App() {
         isOpen={isPublicSidebarOpen}
         onClose={() => setIsPublicSidebarOpen(false)}
         onSelectOption={handleDynamicMenuSelect}
-        currentUserRole={isAdminAuthenticated ? 'admin' : 'publico'}
+        currentUserRole={isAdminAuthenticated ? 'admin' : (userRole as any || 'publico')}
       />
 
       {/* Modal de Instalação PWA */}
@@ -496,7 +576,7 @@ export default function App() {
         onClose={() => setIsPWAInstallModalOpen(false)}
       />
 
-      {/* Assistente IA Flutuante na Área Pública (Oculto nos portais de cliente e profissional) */}
+      {/* Assistente IA Flutuante na Área Pública */}
       {currentPublicView !== 'area_cliente' && currentPublicView !== 'espaco_profissional' && (
         <AIAssistantButton onNavigate={handlePublicViewChange} />
       )}

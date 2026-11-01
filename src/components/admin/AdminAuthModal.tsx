@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Lock, Mail, Eye, EyeOff, ShieldCheck, AlertCircle, ArrowLeft, KeyRound } from 'lucide-react';
+import { Lock, Mail, Eye, EyeOff, ShieldCheck, AlertCircle, ArrowLeft, KeyRound, Loader2 } from 'lucide-react';
+import { supabase } from '@/src/lib/supabase';
 
 interface AdminAuthModalProps {
   isOpen: boolean;
@@ -12,32 +13,73 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
   onClose,
   onLoginSuccess,
 }) => {
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState('salaoluxe.oficial@gmail.com');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setLoading(true);
 
-    // Default admin credential validation (or any valid email/password pair)
-    const validEmail = email.trim().toLowerCase() === 'admin@salaoluxe.com' || email.trim().toLowerCase() === 'admin';
-    const validPassword = password === 'admin' || password === 'luxe123' || password.length >= 4;
+    try {
+      const cleanEmail = email.trim().toLowerCase();
 
-    if (validEmail && validPassword) {
-      onLoginSuccess();
-    } else {
-      setError('Credenciais inválidas. Utilize e-mail e senha de administrador cadastrados.');
+      // 1. Authenticate with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: cleanEmail,
+        password,
+      });
+
+      if (authError) {
+        if (authError.message.includes('Invalid login credentials')) {
+          setError('E-mail ou senha incorretos. Verifique suas credenciais.');
+        } else {
+          setError(authError.message || 'Falha na autenticação via Supabase Auth.');
+        }
+        setLoading(false);
+        return;
+      }
+
+      const user = authData?.user;
+      if (!user) {
+        setError('Usuário não encontrado na resposta de autenticação.');
+        setLoading(false);
+        return;
+      }
+
+      // 2. Query public.user_roles by user.id
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (roleError) {
+        console.warn('Aviso ao consultar user_roles:', roleError.message);
+      }
+
+      const userRole = roleData?.role;
+
+      // 3. Verify if user is admin strictly via user_roles table
+      const isAdmin = userRole === 'admin';
+
+      if (isAdmin) {
+        onLoginSuccess();
+      } else {
+        await supabase.auth.signOut();
+        setError('Acesso negado: Este usuário não possui a função de administrador ("admin") cadastrada no Supabase.');
+      }
+    } catch (err: any) {
+      console.error('Erro ao realizar login admin:', err);
+      setError(err?.message || 'Ocorreu um erro inesperado durante a autenticação.');
+    } finally {
+      setLoading(false);
     }
-  };
-
-  const handleQuickMasterLogin = () => {
-    setEmail('admin@salaoluxe.com');
-    setPassword('admin');
-    onLoginSuccess();
   };
 
   return (
@@ -51,9 +93,9 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
           <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-[#d4af37] to-[#8a7122] flex items-center justify-center text-black font-extrabold mx-auto shadow-lg shadow-[#d4af37]/20">
             <Lock size={26} />
           </div>
-          <h2 className="text-2xl font-extrabold text-white tracking-tight">Área Restrita</h2>
+          <h2 className="text-2xl font-extrabold text-white tracking-tight">Área Restrita Admin</h2>
           <p className="text-neutral-400 text-xs">
-            Acesso exclusivo para administradores e equipe autorizada do Salão Luxe.
+            Autenticação via Supabase Auth. Acesso exclusivo para administradores autorizados.
           </p>
         </div>
 
@@ -71,12 +113,13 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
               E-mail Administrativo
             </label>
             <input
-              type="text"
+              type="email"
               required
-              placeholder="admin@salaoluxe.com"
+              placeholder="salaoluxe.oficial@gmail.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full bg-[#161616] border border-white/10 rounded-xl p-3 text-white text-xs focus:outline-none focus:border-[#d4af37]/60 transition-all placeholder:text-neutral-600"
+              disabled={loading}
+              className="w-full bg-[#161616] border border-white/10 rounded-xl p-3 text-white text-xs focus:outline-none focus:border-[#d4af37]/60 transition-all placeholder:text-neutral-600 disabled:opacity-50"
             />
           </div>
 
@@ -92,12 +135,14 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full bg-[#161616] border border-white/10 rounded-xl py-3 pl-3 pr-10 text-white text-xs focus:outline-none focus:border-[#d4af37]/60 transition-all placeholder:text-neutral-600"
+                disabled={loading}
+                className="w-full bg-[#161616] border border-white/10 rounded-xl py-3 pl-3 pr-10 text-white text-xs focus:outline-none focus:border-[#d4af37]/60 transition-all placeholder:text-neutral-600 disabled:opacity-50"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white transition-colors"
+                disabled={loading}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 hover:text-white transition-colors disabled:opacity-50"
               >
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
@@ -106,33 +151,30 @@ export const AdminAuthModal: React.FC<AdminAuthModalProps> = ({
 
           <button
             type="submit"
-            className="w-full py-3.5 bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#b8860b] text-black font-extrabold text-xs uppercase tracking-wider rounded-xl hover:opacity-90 transition-all shadow-lg shadow-[#d4af37]/20 flex items-center justify-center gap-2 mt-2"
+            disabled={loading}
+            className="w-full py-3.5 bg-gradient-to-r from-[#d4af37] via-[#f3e5ab] to-[#b8860b] text-black font-extrabold text-xs uppercase tracking-wider rounded-xl hover:opacity-90 transition-all shadow-lg shadow-[#d4af37]/20 flex items-center justify-center gap-2 mt-2 disabled:opacity-50 cursor-pointer"
           >
-            <ShieldCheck size={16} />
-            Entrar no Painel Gerencial
+            {loading ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                <span>Autenticando...</span>
+              </>
+            ) : (
+              <>
+                <ShieldCheck size={16} />
+                <span>Entrar no Painel Gerencial</span>
+              </>
+            )}
           </button>
         </form>
-
-        {/* Quick Demo Access Button */}
-        <div className="pt-4 border-t border-white/10 space-y-2 relative z-10 text-center">
-          <span className="text-[10px] text-neutral-500 uppercase tracking-wider font-semibold block">
-            Ambiente de Testes / Liberação Rápida:
-          </span>
-          <button
-            type="button"
-            onClick={handleQuickMasterLogin}
-            className="w-full py-2 bg-white/5 hover:bg-[#d4af37]/20 border border-white/10 hover:border-[#d4af37]/30 text-neutral-300 hover:text-[#d4af37] text-xs font-bold rounded-xl transition-all"
-          >
-            ⚡ Acesso Imediato como Admin Master
-          </button>
-        </div>
 
         {/* Return to Public Area */}
         <div className="text-center pt-2 relative z-10">
           <button
             type="button"
             onClick={onClose}
-            className="text-xs text-neutral-400 hover:text-white flex items-center gap-1.5 mx-auto transition-colors"
+            disabled={loading}
+            className="text-xs text-neutral-400 hover:text-white flex items-center gap-1.5 mx-auto transition-colors disabled:opacity-50"
           >
             <ArrowLeft size={14} /> Voltar para Área Pública
           </button>
