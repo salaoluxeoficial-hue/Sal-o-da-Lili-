@@ -22,6 +22,8 @@ import { useLocalStorage } from '@/src/hooks/useLocalStorage';
 import { getInitialConversations } from '@/src/services/chatStorage';
 import { initialClientsList } from '@/src/components/Clients';
 import { initialProfessionalsList } from '@/src/components/Professionals';
+import { getAdminProfile, AdminProfile } from '@/src/services/adminProfileStorage';
+import { useClickOutside } from '@/src/hooks/useClickOutside';
 
 interface SidebarProps {
   currentView: ViewType;
@@ -53,6 +55,34 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isO
   );
   const unreadChatCount = conversations.reduce((acc, curr) => acc + (curr.unreadCountAdmin || 0), 0);
 
+  const [adminProfile, setAdminProfile] = React.useState<AdminProfile>(() => getAdminProfile());
+  const sidebarRef = React.useRef<HTMLElement>(null);
+
+  // Sync admin profile updates
+  React.useEffect(() => {
+    const handleProfileUpdate = () => {
+      setAdminProfile(getAdminProfile());
+    };
+    window.addEventListener('salao-luxe-admin-profile-sync', handleProfileUpdate);
+    window.addEventListener('storage', handleProfileUpdate);
+    return () => {
+      window.removeEventListener('salao-luxe-admin-profile-sync', handleProfileUpdate);
+      window.removeEventListener('storage', handleProfileUpdate);
+    };
+  }, []);
+
+  // Fechamento automático ao clicar fora no celular/tablet
+  useClickOutside(
+    sidebarRef, 
+    () => {
+      if (isOpen && window.innerWidth < 1024) {
+        setIsOpen(false);
+      }
+    },
+    undefined,
+    isOpen && typeof window !== 'undefined' && window.innerWidth < 1024
+  );
+
   return (
     <>
       {/* Mobile Backdrop */}
@@ -64,7 +94,9 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isO
       )}
 
       {/* Sidebar */}
-      <aside className={cn(
+      <aside 
+        ref={sidebarRef}
+        className={cn(
         "fixed top-0 left-0 h-full bg-[#0a0a0a] border-r border-[#d4af37]/20 z-50 transition-all duration-300",
         isOpen ? "w-64" : "w-20",
         "lg:translate-x-0",
@@ -157,13 +189,25 @@ export const Sidebar: React.FC<SidebarProps> = ({ currentView, onViewChange, isO
               "flex items-center gap-3",
               !isOpen && "justify-center"
             )}>
-              <div className="w-10 h-10 rounded-full bg-[#d4af37] flex items-center justify-center text-black font-bold">
-                AD
-              </div>
+              {adminProfile.avatarUrl ? (
+                <img
+                  src={adminProfile.avatarUrl}
+                  alt={adminProfile.name || "Administrador"}
+                  className="w-10 h-10 rounded-full object-cover border-2 border-[#d4af37] shadow-md shrink-0"
+                />
+              ) : (
+                <div className="w-10 h-10 rounded-full bg-[#d4af37] flex items-center justify-center text-black font-bold shrink-0">
+                  AD
+                </div>
+              )}
               {isOpen && (
-                <div className="flex flex-col">
-                  <span className="text-white text-sm font-medium">Administrador</span>
-                  <span className="text-neutral-500 text-xs uppercase tracking-tighter">Premium Plan</span>
+                <div className="flex flex-col min-w-0">
+                  <span className="text-white text-sm font-medium truncate">
+                    {adminProfile.name || 'Administrador'}
+                  </span>
+                  <span className="text-[#d4af37] text-[11px] uppercase tracking-tighter truncate">
+                    {adminProfile.roleTitle || 'Painel Master'}
+                  </span>
                 </div>
               )}
             </div>

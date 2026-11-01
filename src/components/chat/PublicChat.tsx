@@ -13,6 +13,7 @@ import { initialProfessionalsList } from '@/src/components/Professionals';
 import { getInitialChatBranding, ChatBrandingSettings } from '@/src/services/chatBrandingStorage';
 import { AudioPlayer } from '@/src/components/chat/AudioPlayer';
 import { AudioRecorder } from '@/src/components/chat/AudioRecorder';
+import { ChatAvatar } from '@/src/components/chat/ChatAvatar';
 
 import { processAudioMessageWithAI } from '@/src/services/aiAudioChatService';
 
@@ -26,7 +27,7 @@ export const PublicChat: React.FC<PublicChatProps> = ({ onBack, currentClient })
   const [professionals] = useLocalStorage<Professional[]>('professionals', initialProfessionalsList);
   const [storedConversations, setStoredConversations] = useLocalStorage<ChatConversation[]>('chat_conversations', []);
   const [messages, setMessages] = useLocalStorage<ChatMessage[]>('chat_messages', getStoredMessages());
-  const [branding] = useState<ChatBrandingSettings>(() => getInitialChatBranding());
+  const [branding, setBranding] = useState<ChatBrandingSettings>(() => getInitialChatBranding());
 
   const publicClient = useMemo(() => currentClient || clients[0] || {
     id: 'cli-public-visitor',
@@ -77,6 +78,19 @@ export const PublicChat: React.FC<PublicChatProps> = ({ onBack, currentClient })
       window.removeEventListener('storage', handleSync);
     };
   }, [setMessages, setStoredConversations]);
+
+  // Sync AI branding updates
+  useEffect(() => {
+    const handleBrandingSync = () => {
+      setBranding(getInitialChatBranding());
+    };
+    window.addEventListener('salao-luxe-branding-sync', handleBrandingSync);
+    window.addEventListener('storage', handleBrandingSync);
+    return () => {
+      window.removeEventListener('salao-luxe-branding-sync', handleBrandingSync);
+      window.removeEventListener('storage', handleBrandingSync);
+    };
+  }, []);
 
   const clientMessages = useMemo(() => {
     return messages
@@ -191,9 +205,9 @@ export const PublicChat: React.FC<PublicChatProps> = ({ onBack, currentClient })
     <div className="max-w-2xl mx-auto space-y-3 animate-in fade-in duration-500">
       {/* Container Principal de Chat Elegante e Minimalista */}
       <div className="bg-[#080808] border border-white/10 rounded-2xl overflow-hidden shadow-2xl flex flex-col h-[440px] sm:h-[480px] max-h-[65vh]">
-        {/* Cabeçalho Minimalista */}
+        {/* Cabeçalho Minimalista com Avatar */}
         <div className="bg-[#0c0c0c] border-b border-white/5 px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-3">
             {onBack && (
               <button
                 onClick={onBack}
@@ -204,9 +218,27 @@ export const PublicChat: React.FC<PublicChatProps> = ({ onBack, currentClient })
               </button>
             )}
 
+            {/* Avatar da IA de Recepção ou do Profissional */}
+            {selectedProfessional ? (
+              <div className="w-8 h-8 rounded-full bg-[#181818] border border-[#d4af37]/40 flex items-center justify-center text-[#d4af37] font-bold text-xs shrink-0 overflow-hidden">
+                {selectedProfessional.photoUrl ? (
+                  <img src={selectedProfessional.photoUrl} alt={selectedProfessional.name} className="w-full h-full object-cover" />
+                ) : (
+                  selectedProfessional.name.slice(0, 2).toUpperCase()
+                )}
+              </div>
+            ) : (
+              <ChatAvatar
+                type="reception"
+                config={branding.receptionChat}
+                size="sm"
+                showStatusIndicator={true}
+              />
+            )}
+
             <div>
               <h1 className="text-sm font-semibold text-white tracking-tight">
-                {selectedProfessional ? selectedProfessional.name : branding.receptionChat.name}
+                {selectedProfessional ? selectedProfessional.name : (branding.receptionChat.name || 'Recepção VIP')}
               </h1>
               <p className="text-[10px] text-neutral-400 font-light mt-0.5">
                 {selectedProfessional ? selectedProfessional.role : 'Atendimento VIP Salão Luxe'}
@@ -235,7 +267,7 @@ export const PublicChat: React.FC<PublicChatProps> = ({ onBack, currentClient })
                 Atendimento Privado
               </span>
               <p className="text-neutral-400 text-xs font-light max-w-xs leading-relaxed">
-                Envie uma mensagem ou grave um áudio para falar diretamente com a recepção do Salão Luxe.
+                Envie uma mensagem ou grave um áudio para falar diretamente com {selectedProfessional ? selectedProfessional.name : (branding.receptionChat.name || 'a recepção')}.
               </p>
             </div>
           ) : (
@@ -245,8 +277,23 @@ export const PublicChat: React.FC<PublicChatProps> = ({ onBack, currentClient })
               return (
                 <div
                   key={msg.id}
-                  className={`flex flex-col ${isFromClient ? 'items-end' : 'items-start'}`}
+                  className={`flex gap-2.5 ${isFromClient ? 'justify-end' : 'justify-start'}`}
                 >
+                  {!isFromClient && (
+                    <div className="shrink-0 self-end mb-4">
+                      {selectedProfessional ? (
+                        <div className="w-6 h-6 rounded-full bg-[#181818] border border-[#d4af37]/30 flex items-center justify-center text-[#d4af37] text-[10px] font-bold">
+                          {selectedProfessional.name.slice(0, 2).toUpperCase()}
+                        </div>
+                      ) : (
+                        <ChatAvatar
+                          type="reception"
+                          config={branding.receptionChat}
+                          size="xs"
+                        />
+                      )}
+                    </div>
+                  )}
                   <div className="max-w-[85%] space-y-1">
                     <div
                       className={`p-3 rounded-2xl text-xs sm:text-sm font-light leading-relaxed ${

@@ -1,12 +1,11 @@
-import React from 'react';
-import { Sparkles, Headphones, Bot } from 'lucide-react';
+import { Sparkles, Headphones, Bot, ShieldCheck } from 'lucide-react';
 import { ChatAppearanceConfig } from '@/src/services/chatBrandingStorage';
 import { cn } from '@/src/lib/utils';
 
 interface ChatAvatarProps {
   config: ChatAppearanceConfig;
-  type: 'ai' | 'reception';
-  size?: 'sm' | 'md' | 'lg' | 'xl';
+  type: 'ai' | 'reception' | 'admin';
+  size?: 'xs' | 'sm' | 'md' | 'lg' | 'xl';
   showStatusIndicator?: boolean;
   showStatusDot?: boolean;
   className?: string;
@@ -22,6 +21,7 @@ export const ChatAvatar: React.FC<ChatAvatarProps> = ({
 }) => {
   const showDot = showStatusDot !== undefined ? showStatusDot : showStatusIndicator;
   const sizeMap = {
+    xs: 'w-6 h-6 text-[10px]',
     sm: 'w-8 h-8 text-xs',
     md: 'w-10 h-10 text-sm',
     lg: 'w-12 h-12 text-base',
@@ -29,6 +29,7 @@ export const ChatAvatar: React.FC<ChatAvatarProps> = ({
   };
 
   const iconSizeMap = {
+    xs: 12,
     sm: 15,
     md: 18,
     lg: 22,
@@ -36,6 +37,7 @@ export const ChatAvatar: React.FC<ChatAvatarProps> = ({
   };
 
   const statusSizeMap = {
+    xs: 'w-1.5 h-1.5',
     sm: 'w-2 h-2',
     md: 'w-2.5 h-2.5',
     lg: 'w-3 h-3',
@@ -79,6 +81,15 @@ export const ChatAvatar: React.FC<ChatAvatarProps> = ({
               style={{ color: config.accentColor || '#d4af37' }}
               className="drop-shadow-[0_0_6px_rgba(212,175,55,0.6)] animate-pulse" 
             />
+          </div>
+        ) : type === 'admin' ? (
+          <div 
+            className="w-full h-full flex items-center justify-center font-bold text-black"
+            style={{
+              background: config.accentColor || '#d4af37',
+            }}
+          >
+            <ShieldCheck size={iconSizeMap[size]} className="text-black" />
           </div>
         ) : (
           <div 

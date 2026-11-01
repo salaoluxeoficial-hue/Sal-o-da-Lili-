@@ -12,6 +12,7 @@ import {
 import { ChatAttachment, QuickReply, ChatParticipantType } from '@/src/types';
 import { formatFileSize } from '@/src/services/chatStorage';
 import { AudioRecorder } from './AudioRecorder';
+import { useClickOutside } from '@/src/hooks/useClickOutside';
 
 interface ChatInputProps {
   onSendMessage: (content: string, attachment?: ChatAttachment) => void;
@@ -37,20 +38,8 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const quickMenuRef = useRef<HTMLDivElement>(null);
 
-  // Close quick menu on click outside
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (quickMenuRef.current && !quickMenuRef.current.contains(e.target as Node)) {
-        setShowQuickMenu(false);
-      }
-    };
-    if (showQuickMenu) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showQuickMenu]);
+  // Close quick menu on click or touch outside
+  useClickOutside(quickMenuRef, () => setShowQuickMenu(false), undefined, showQuickMenu);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

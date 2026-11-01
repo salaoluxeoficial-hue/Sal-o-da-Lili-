@@ -12,6 +12,9 @@ import {
 } from '@/src/services/chatStorage';
 import { getOrCreatePersistentClientUUID } from '@/src/services/supabaseChatService';
 import { processAudioMessageWithAI } from '@/src/services/aiAudioChatService';
+import { getInitialChatBranding, ChatBrandingSettings } from '@/src/services/chatBrandingStorage';
+import { ChatAvatar } from '@/src/components/chat/ChatAvatar';
+import { useClickOutside } from '@/src/hooks/useClickOutside';
 
 interface AIAssistantButtonProps {
   onNavigate?: (view: ViewType) => void;
@@ -20,6 +23,7 @@ interface AIAssistantButtonProps {
 export const AIAssistantButton: React.FC<AIAssistantButtonProps> = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
+  const [branding, setBranding] = useState<ChatBrandingSettings>(() => getInitialChatBranding());
 
   // Persistent Client UUID for visitor identification
   const visitorId = useMemo(() => getOrCreatePersistentClientUUID(), []);
@@ -51,6 +55,19 @@ export const AIAssistantButton: React.FC<AIAssistantButtonProps> = () => {
     };
   }, [setStoredMessages, setStoredConvs]);
 
+  // Sync AI branding updates
+  useEffect(() => {
+    const handleBrandingSync = () => {
+      setBranding(getInitialChatBranding());
+    };
+    window.addEventListener('salao-luxe-branding-sync', handleBrandingSync);
+    window.addEventListener('storage', handleBrandingSync);
+    return () => {
+      window.removeEventListener('salao-luxe-branding-sync', handleBrandingSync);
+      window.removeEventListener('storage', handleBrandingSync);
+    };
+  }, []);
+
   // Filter messages specifically belonging to this visitor conversation
   const liveChatMessages = useMemo(() => {
     return storedMessages
@@ -66,6 +83,8 @@ export const AIAssistantButton: React.FC<AIAssistantButtonProps> = () => {
   }, [isOpen, conversationId, liveChatMessages.length]);
 
   const chatEndRef = useRef<HTMLDivElement>(null);
+  const windowRef = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
 
   // Auto-scroll on new messages
   useEffect(() => {
@@ -73,6 +92,14 @@ export const AIAssistantButton: React.FC<AIAssistantButtonProps> = () => {
       chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
   }, [liveChatMessages, isOpen]);
+
+  // Fechamento automático por clique externo (global & mobile/desktop)
+  useClickOutside(
+    windowRef,
+    () => setIsOpen(false),
+    [buttonRef],
+    isOpen
+  );
 
   // Send audio message recorded in floating balloon widget
   const handleSendAudioAttachment = (attachment: ChatAttachment) => {
@@ -134,34 +161,56 @@ export const AIAssistantButton: React.FC<AIAssistantButtonProps> = () => {
     <>
       {/* Botão Flutuante Pequeno, Arredondado & Elegante */}
       <button
+        ref={buttonRef}
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-20 sm:bottom-24 right-4 sm:right-6 z-50 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#0c0c0c] border-2 border-[#d4af37] text-[#d4af37] shadow-2xl hover:bg-[#141414] hover:scale-110 active:scale-95 transition-all duration-300 flex items-center justify-center shrink-0 relative group"
-        title="Atendimento Salão Luxe"
-        aria-label="Abrir atendimento"
+        className="fixed bottom-[74px] sm:bottom-[84px] right-4 sm:right-6 z-50 w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-[#0c0c0c] border-2 border-[#d4af37] text-[#d4af37] shadow-2xl hover:bg-[#141414] hover:scale-105 active:scale-95 transition-all duration-300 flex items-center justify-center shrink-0 group select-none overflow-hidden"
+        title={isOpen ? "Fechar atendimento" : (branding.aiAssistant.name || "Atendimento Salão Luxe")}
+        aria-label={isOpen ? "Fechar atendimento" : "Abrir atendimento"}
       >
-        <Headphones size={22} className="group-hover:rotate-12 transition-transform" />
+        {isOpen ? (
+          <X size={22} className="text-[#d4af37] transition-transform duration-200" />
+        ) : branding.aiAssistant.avatarUrl ? (
+          <div className="w-full h-full rounded-full overflow-hidden flex items-center justify-center p-0.5">
+            <ChatAvatar 
+              type="ai" 
+              config={branding.aiAssistant} 
+              size="md" 
+              className="w-full h-full border-0" 
+              showStatusIndicator={false}
+            />
+          </div>
+        ) : (
+          <Headphones size={22} className="group-hover:rotate-12 transition-transform duration-200 text-[#d4af37]" />
+        )}
 
-        {unreadCount > 0 && (
+        {!isOpen && unreadCount > 0 && (
           <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#d4af37] text-black rounded-full text-[10px] font-bold flex items-center justify-center border-2 border-[#0c0c0c]">
             {unreadCount}
           </span>
         )}
       </button>
 
-      {/* Janela de Chat Compacta e Proporcional */}
+      {/* Janela de Chat Compacta e Proporcional - Fixa acima do botão no canto inferior direito */}
       {isOpen && (
-        <div className="fixed bottom-20 sm:bottom-24 right-4 sm:right-6 z-50 w-[320px] sm:w-[350px] max-w-[calc(100vw-32px)] h-[400px] sm:h-[440px] max-h-[70vh] bg-[#080808] border border-[#d4af37]/35 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
-          
-          {/* Cabeçalho Discreto */}
+        <div 
+          ref={windowRef}
+          className="fixed bottom-[134px] sm:bottom-[150px] right-4 sm:right-6 z-50 w-[320px] sm:w-[350px] max-w-[calc(100vw-32px)] h-[390px] sm:h-[430px] max-h-[calc(100vh-210px)] bg-[#080808] border border-[#d4af37]/35 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-250"
+        >
+          {/* Cabeçalho Discreto com Avatar Personalizado da IA */}
           <div className="bg-[#0c0c0c] border-b border-[#d4af37]/20 p-3 px-4 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-[#d4af37] animate-pulse" />
+              <ChatAvatar
+                type="ai"
+                config={branding.aiAssistant}
+                size="sm"
+                showStatusIndicator={true}
+              />
               <div>
                 <h3 className="text-xs font-semibold text-white">
-                  Atendimento Salão Luxe
+                  {branding.aiAssistant.name || 'Assistente Luxe'}
                 </h3>
                 <p className="text-[10px] text-neutral-400 font-light">
-                  Recepção & Mensagens
+                  Recepção & Concierge Virtual
                 </p>
               </div>
             </div>
@@ -183,7 +232,7 @@ export const AIAssistantButton: React.FC<AIAssistantButtonProps> = () => {
                   Canal Direto
                 </span>
                 <p className="text-neutral-400 text-xs font-light max-w-xs leading-relaxed">
-                  Digite sua dúvida ou grave um áudio para falar com o Salão Luxe.
+                  Digite sua dúvida ou grave um áudio para falar com a {branding.aiAssistant.name || 'assistente'}.
                 </p>
               </div>
             ) : (
@@ -194,9 +243,18 @@ export const AIAssistantButton: React.FC<AIAssistantButtonProps> = () => {
                 return (
                   <div
                     key={msg.id}
-                    className={`flex flex-col ${isFromClient ? 'items-end' : 'items-start'}`}
+                    className={`flex gap-2 ${isFromClient ? 'justify-end' : 'justify-start'}`}
                   >
-                    <div className="max-w-[88%] space-y-0.5">
+                    {!isFromClient && (
+                      <div className="shrink-0 self-end mb-4">
+                        <ChatAvatar
+                          type="ai"
+                          config={branding.aiAssistant}
+                          size="xs"
+                        />
+                      </div>
+                    )}
+                    <div className="max-w-[85%] space-y-0.5">
                       <div
                         className={`p-2.5 rounded-2xl text-xs font-light leading-relaxed ${
                           isFromClient

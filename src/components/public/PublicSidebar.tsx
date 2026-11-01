@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { DynamicMenuItem, ViewType, UserRole } from '@/src/types';
 import { getInitialDynamicMenu } from '@/src/services/dynamicMenuStorage';
+import { useClickOutside } from '@/src/hooks/useClickOutside';
 import { cn } from '@/src/lib/utils';
 
 interface PublicSidebarProps {
@@ -46,6 +47,9 @@ export const PublicSidebar: React.FC<PublicSidebarProps> = ({
   currentUserRole = 'publico'
 }) => {
   const [menuItems, setMenuItems] = useState<DynamicMenuItem[]>(() => getInitialDynamicMenu());
+  const asideRef = React.useRef<HTMLElement>(null);
+
+  useClickOutside(asideRef, onClose, undefined, isOpen);
 
   useEffect(() => {
     const handleMenuUpdate = () => {
@@ -76,7 +80,10 @@ export const PublicSidebar: React.FC<PublicSidebarProps> = ({
       />
 
       {/* Drawer */}
-      <aside className="fixed top-0 left-0 bottom-0 w-80 max-w-[85vw] bg-[#0a0a0a] border-r border-[#d4af37]/30 z-50 shadow-2xl flex flex-col justify-between animate-in slide-in-from-left duration-300">
+      <aside 
+        ref={asideRef}
+        className="fixed top-0 left-0 bottom-0 w-80 max-w-[85vw] bg-[#0a0a0a] border-r border-[#d4af37]/30 z-50 shadow-2xl flex flex-col justify-between animate-in slide-in-from-left duration-300"
+      >
         <div>
           {/* Header */}
           <div className="p-6 border-b border-[#d4af37]/20 flex items-center justify-between bg-[#101010]">

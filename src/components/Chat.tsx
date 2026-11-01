@@ -351,7 +351,12 @@ export const Chat: React.FC = () => {
 
       {/* New Chat Picker Modal */}
       {isNewChatModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+        <div 
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsNewChatModalOpen(false);
+          }}
+        >
           <div className="bg-[#0f0f0f] border border-[#d4af37]/30 rounded-2xl max-w-lg w-full overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
             <div className="p-4 border-b border-white/10 bg-[#141414] flex items-center justify-between">
               <div>
@@ -422,7 +427,12 @@ export const Chat: React.FC = () => {
 
       {/* Modal de Personalização dos Atendimentos & Chats */}
       {isBrandingModalOpen && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in">
+        <div 
+          className="fixed inset-0 bg-black/80 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setIsBrandingModalOpen(false);
+          }}
+        >
           <div className="w-full max-w-4xl max-h-[90vh] bg-[#0d0d0d] border border-[#d4af37]/30 rounded-3xl shadow-2xl overflow-y-auto p-4 sm:p-6 relative">
             <button
               onClick={() => setIsBrandingModalOpen(false)}

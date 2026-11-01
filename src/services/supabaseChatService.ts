@@ -504,3 +504,42 @@ export async function uploadAudioToSupabaseStorage(blob: Blob, fileName: string)
   return signedData.signedUrl;
 }
 
+/**
+ * Uploads an avatar image (AI assistants, admin, etc.) to Supabase Storage bucket 'chat-audios'.
+ * Returns the permanent public URL or signed URL.
+ */
+export async function uploadImageToSupabaseStorage(blob: Blob, fileName: string): Promise<string> {
+  await ensureAuthenticatedSession();
+
+  const bucket = 'chat-audios';
+  const cleanName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_');
+  const filePath = `avatars/${Date.now()}_${cleanName}`;
+
+  try {
+    const { error } = await supabase.storage.from(bucket).upload(filePath, blob, {
+      contentType: blob.type || 'image/jpeg',
+      upsert: true,
+    });
+
+    if (error) {
+      console.warn('Upload de avatar no Supabase Storage notice:', error.message);
+    } else {
+      const { data: publicUrlData } = supabase.storage.from(bucket).getPublicUrl(filePath);
+      if (publicUrlData?.publicUrl) {
+        return publicUrlData.publicUrl;
+      }
+    }
+  } catch (err) {
+    console.warn('Exception ao enviar imagem para o Supabase Storage:', err);
+  }
+
+  // Se o upload falhar ou não retornar URL pública, converte para Data URL persistente
+  return new Promise<string>((resolve) => {
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      resolve(reader.result as string);
+    };
+    reader.readAsDataURL(blob);
+  });
+}
+

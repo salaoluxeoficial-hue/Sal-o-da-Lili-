@@ -28,6 +28,7 @@ import { getInitialAppointments, getInitialAbsences } from '@/src/services/agend
 import { getInitialConversations } from '@/src/services/chatStorage';
 import { getInitialCommissions } from '@/src/services/financialStorage';
 import { supabase } from '@/src/lib/supabase';
+import { getAdminProfile, AdminProfile } from '@/src/services/adminProfileStorage';
 import { Menu, Search, Bell, LogOut, ShieldCheck, Home, ArrowLeft } from 'lucide-react';
 
 export default function App() {
@@ -60,6 +61,20 @@ export default function App() {
     'chat_conversations', 
     getInitialConversations(initialClientsList, initialProfessionalsList)
   );
+  const [adminProfile, setAdminProfile] = useState<AdminProfile>(() => getAdminProfile());
+
+  // Listen to admin profile updates
+  useEffect(() => {
+    const handleProfileUpdate = () => {
+      setAdminProfile(getAdminProfile());
+    };
+    window.addEventListener('salao-luxe-admin-profile-sync', handleProfileUpdate);
+    window.addEventListener('storage', handleProfileUpdate);
+    return () => {
+      window.removeEventListener('salao-luxe-admin-profile-sync', handleProfileUpdate);
+      window.removeEventListener('storage', handleProfileUpdate);
+    };
+  }, []);
 
   // Supabase Auth session & user role synchronization
   useEffect(() => {
@@ -433,10 +448,20 @@ export default function App() {
                 <span>Tela inicial</span>
               </button>
 
-              {/* Badge de Área protegida */}
-              <div className="hidden lg:flex items-center gap-2 px-3 py-1 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/30 text-[#d4af37] text-xs font-bold uppercase tracking-wider">
-                <ShieldCheck size={14} />
-                <span>{sessionUser?.email || 'Admin Autenticado'}</span>
+              {/* Identificação / Avatar do Administrador */}
+              <div className="hidden sm:flex items-center gap-2.5 px-3 py-1 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/30 text-[#d4af37] text-xs font-semibold">
+                {adminProfile.avatarUrl ? (
+                  <img
+                    src={adminProfile.avatarUrl}
+                    alt={adminProfile.name || "Admin"}
+                    className="w-5 h-5 rounded-full object-cover border border-[#d4af37]"
+                  />
+                ) : (
+                  <ShieldCheck size={14} className="text-[#d4af37]" />
+                )}
+                <span className="truncate max-w-[160px] tracking-wide">
+                  {adminProfile.name || sessionUser?.email || 'Administrador'}
+                </span>
               </div>
 
               <button 
@@ -522,18 +547,7 @@ export default function App() {
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button 
-            onClick={() => setCurrentPublicView('chat')}
-            className="p-2 text-neutral-400 hover:text-[#d4af37] hover:bg-white/5 rounded-xl transition-all relative"
-            title="Atendimento"
-          >
-            <Bell size={18} />
-            {totalUnreadChat > 0 && (
-              <span className="absolute top-1 right-1 w-2 h-2 bg-[#d4af37] rounded-full" />
-            )}
-          </button>
-        </div>
+        {/* Cabeçalho limpo sem sino de chat */}
       </header>
 
       {/* Conteúdo Principal da Área Pública */}
