@@ -15,7 +15,7 @@ import { AudioPlayer } from '@/src/components/chat/AudioPlayer';
 import { AudioRecorder } from '@/src/components/chat/AudioRecorder';
 import { ChatAvatar } from '@/src/components/chat/ChatAvatar';
 
-import { processAudioMessageWithAI } from '@/src/services/aiAudioChatService';
+import { processAudioMessageWithAI, processTextMessageWithAI } from '@/src/services/aiAudioChatService';
 
 interface PublicChatProps {
   onBack?: () => void;
@@ -161,6 +161,17 @@ export const PublicChat: React.FC<PublicChatProps> = ({ onBack, currentClient })
       }
     });
 
+    // Se o cliente estiver falando com a recepção e não com um profissional específico, ativa a IA Concierge
+    if (!selectedProfessional && content && !attachmentObj) {
+      processTextMessageWithAI({
+        conversationId,
+        message: content,
+        visitorName: publicClient.name,
+        aiName: branding.aiAssistant.name || 'Assistente Luxe',
+        history: clientMessages.slice(-6)
+      });
+    }
+
     setInputMessage('');
     setSelectedFile(null);
     setAttachmentPreview(null);
@@ -193,12 +204,15 @@ export const PublicChat: React.FC<PublicChatProps> = ({ onBack, currentClient })
       }
     });
 
-    // Trigger AI response to received audio
-    processAudioMessageWithAI({
-      conversationId,
-      attachment,
-      visitorName: publicClient.name
-    });
+    // Se estiver em atendimento com a recepção, ativa a IA Concierge para o áudio
+    if (!selectedProfessional) {
+      processAudioMessageWithAI({
+        conversationId,
+        attachment,
+        visitorName: publicClient.name,
+        aiName: branding.aiAssistant.name || 'Assistente Luxe'
+      });
+    }
   };
 
   return (

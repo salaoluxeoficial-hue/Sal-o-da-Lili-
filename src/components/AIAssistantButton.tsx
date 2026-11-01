@@ -11,7 +11,7 @@ import {
   markConversationAsReadDirectly 
 } from '@/src/services/chatStorage';
 import { getOrCreatePersistentClientUUID } from '@/src/services/supabaseChatService';
-import { processAudioMessageWithAI } from '@/src/services/aiAudioChatService';
+import { processAudioMessageWithAI, processTextMessageWithAI } from '@/src/services/aiAudioChatService';
 import { getInitialChatBranding, ChatBrandingSettings } from '@/src/services/chatBrandingStorage';
 import { ChatAvatar } from '@/src/components/chat/ChatAvatar';
 import { useClickOutside } from '@/src/hooks/useClickOutside';
@@ -23,6 +23,8 @@ interface AIAssistantButtonProps {
 export const AIAssistantButton: React.FC<AIAssistantButtonProps> = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [input, setInput] = useState('');
+  const [isAiTyping, setIsAiTyping] = useState(false);
+  const [aiErrorNotice, setAiErrorNotice] = useState<string | null>(null);
   const [branding, setBranding] = useState<ChatBrandingSettings>(() => getInitialChatBranding());
 
   // Persistent Client UUID for visitor identification
@@ -91,7 +93,7 @@ export const AIAssistantButton: React.FC<AIAssistantButtonProps> = () => {
     if (isOpen) {
       chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [liveChatMessages, isOpen]);
+  }, [liveChatMessages, isAiTyping, isOpen]);
 
   // Fechamento automático por clique externo (global & mobile/desktop)
   useClickOutside(
@@ -102,7 +104,8 @@ export const AIAssistantButton: React.FC<AIAssistantButtonProps> = () => {
   );
 
   // Send audio message recorded in floating balloon widget
-  const handleSendAudioAttachment = (attachment: ChatAttachment) => {
+  const handleSendAudioAttachment = async (attachment: ChatAttachment) => {
+    setAiErrorNotice(null);
     sendMessageDirectly({
       conversationId,
       senderId: visitorId,
@@ -121,18 +124,34 @@ export const AIAssistantButton: React.FC<AIAssistantButtonProps> = () => {
     });
 
     // Trigger AI response to received audio
-    processAudioMessageWithAI({
-      conversationId,
-      attachment,
-      visitorName
-    });
+    setIsAiTyping(true);
+    try {
+      const result = await processAudioMessageWithAI({
+        conversationId,
+        attachment,
+        visitorName,
+        aiName: branding.aiAssistant.name || 'Assistente Luxe'
+      });
+      if (result && !result.success && result.error) {
+        setAiErrorNotice('Serviço de IA temporariamente indisponível.');
+      }
+    } catch (err: any) {
+      console.error('Erro ao processar áudio com IA:', err);
+      setAiErrorNotice('Serviço de IA temporariamente indisponível.');
+    } finally {
+      setIsAiTyping(false);
+    }
   };
 
-  // Send text message in floating balloon widget
-  const handleSendTextMessage = () => {
+  // Send text message in floating balloon widget and query AI
+  const handleSendTextMessage = async () => {
     const text = input.trim();
-    if (!text) return;
+    if (!text || isAiTyping) return;
 
+    setInput('');
+    setAiErrorNotice(null);
+
+    // Salva imediatamente a pergunta do visitante
     sendMessageDirectly({
       conversationId,
       senderId: visitorId,
@@ -149,7 +168,25 @@ export const AIAssistantButton: React.FC<AIAssistantButtonProps> = () => {
       }
     });
 
-    setInput('');
+    // Dispara a consulta para a IA Oficial do Salão Luxe
+    setIsAiTyping(true);
+    try {
+      const result = await processTextMessageWithAI({
+        conversationId,
+        message: text,
+        visitorName,
+        aiName: branding.aiAssistant.name || 'Assistente Luxe',
+        history: liveChatMessages.slice(-6)
+      });
+      if (!result.success) {
+        setAiErrorNotice('Serviço de IA com instabilidade temporária.');
+      }
+    } catch (err: any) {
+      console.error('Erro ao processar mensagem com IA:', err);
+      setAiErrorNotice('Serviço de IA temporariamente indisponível.');
+    } finally {
+      setIsAiTyping(false);
+    }
   };
 
   const unreadCount = useMemo(() => {
@@ -306,8 +343,41 @@ export const AIAssistantButton: React.FC<AIAssistantButtonProps> = () => {
                 );
               })
             )}
+            {isAiTyping && (
+              <div className="flex gap-2 justify-start items-center">
+                <div className="shrink-0 self-end mb-1">
+                  <ChatAvatar
+                    type="ai"
+                    config={branding.aiAssistant}
+                    size="xs"
+                  />
+                </div>
+                <div className="bg-[#141414] border border-[#d4af37]/25 text-[#d4af37] px-3 py-2 rounded-2xl rounded-bl-none text-[11px] font-light flex items-center gap-1.5 shadow-sm">
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37] animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37] animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-1.5 h-1.5 rounded-full bg-[#d4af37] animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <span className="text-[10px] text-neutral-400 ml-1">
+                    {branding.aiAssistant.name || 'Assistente'} digitando...
+                  </span>
+                </div>
+              </div>
+            )}
             <div ref={chatEndRef} />
           </div>
+
+          {/* Aviso visual caso o serviço estiver temporariamente indisponível */}
+          {aiErrorNotice && (
+            <div className="mx-3 my-1 px-2.5 py-1 bg-red-950/40 border border-red-500/30 rounded-lg flex items-center justify-between text-[10px] text-red-300 shrink-0">
+              <span className="truncate">⚠️ {aiErrorNotice}</span>
+              <button 
+                onClick={() => setAiErrorNotice(null)} 
+                className="text-red-400 hover:text-white ml-2 text-xs font-bold leading-none"
+                title="Fechar aviso"
+              >
+                ×
+              </button>
+            </div>
+          )}
 
           {/* Campo de Mensagem Elegante */}
           <form
@@ -328,14 +398,15 @@ export const AIAssistantButton: React.FC<AIAssistantButtonProps> = () => {
               type="text"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Digite sua mensagem..."
-              className="flex-1 bg-[#141414] border border-white/10 focus:border-[#d4af37] text-white rounded-xl px-2.5 py-1.5 text-xs outline-none placeholder:text-neutral-500 font-light transition-all"
+              placeholder={isAiTyping ? "Aguarde a resposta..." : "Digite sua mensagem..."}
+              disabled={isAiTyping}
+              className="flex-1 bg-[#141414] border border-white/10 focus:border-[#d4af37] text-white rounded-xl px-2.5 py-1.5 text-xs outline-none placeholder:text-neutral-500 font-light transition-all disabled:opacity-50"
             />
 
             {/* Botão de Envio Minimalista */}
             <button
               type="submit"
-              disabled={!input.trim()}
+              disabled={!input.trim() || isAiTyping}
               className="p-1.5 bg-[#d4af37] hover:bg-[#e5c158] disabled:opacity-30 text-black font-semibold rounded-xl transition-all shadow-md shrink-0"
               title="Enviar"
             >
