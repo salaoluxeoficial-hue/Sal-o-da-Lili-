@@ -179,27 +179,27 @@ export const PublicChat: React.FC<PublicChatProps> = ({ onBack, currentClient })
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-4 animate-in fade-in duration-500">
+    <div className="max-w-2xl mx-auto space-y-3 animate-in fade-in duration-500">
       {/* Container Principal de Chat Elegante e Minimalista */}
-      <div className="bg-[#080808] border border-white/10 rounded-3xl overflow-hidden shadow-2xl flex flex-col h-[560px] max-h-[80vh]">
+      <div className="bg-[#080808] border border-white/10 rounded-2xl overflow-hidden shadow-2xl flex flex-col h-[440px] sm:h-[480px] max-h-[65vh]">
         {/* Cabeçalho Minimalista */}
-        <div className="bg-[#0c0c0c] border-b border-white/5 px-6 py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3.5">
+        <div className="bg-[#0c0c0c] border-b border-white/5 px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
             {onBack && (
               <button
                 onClick={onBack}
-                className="p-2 text-neutral-400 hover:text-white rounded-xl hover:bg-white/5 transition-colors"
+                className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors"
                 title="Voltar"
               >
-                <ArrowLeft size={18} />
+                <ArrowLeft size={16} />
               </button>
             )}
 
             <div>
-              <h1 className="text-base font-medium text-white tracking-tight">
+              <h1 className="text-sm font-semibold text-white tracking-tight">
                 {selectedProfessional ? selectedProfessional.name : branding.receptionChat.name}
               </h1>
-              <p className="text-[11px] text-neutral-400 font-light mt-0.5">
+              <p className="text-[10px] text-neutral-400 font-light mt-0.5">
                 {selectedProfessional ? selectedProfessional.role : 'Atendimento VIP Salão Luxe'}
               </p>
             </div>
@@ -209,7 +209,7 @@ export const PublicChat: React.FC<PublicChatProps> = ({ onBack, currentClient })
           <select
             value={selectedTargetId}
             onChange={(e) => setSelectedTargetId(e.target.value)}
-            className="bg-[#141414] border border-white/10 text-neutral-300 font-light rounded-xl px-3 py-1.5 text-xs outline-none focus:border-[#c5a059]"
+            className="bg-[#141414] border border-white/10 text-neutral-300 font-light rounded-lg px-2.5 py-1 text-xs outline-none focus:border-[#c5a059]"
           >
             <option value="recepcao">Recepção Luxe</option>
             {professionals.map(p => (
@@ -219,7 +219,7 @@ export const PublicChat: React.FC<PublicChatProps> = ({ onBack, currentClient })
         </div>
 
         {/* Feed de Mensagens Limpo */}
-        <div className="flex-1 p-6 overflow-y-auto space-y-4 bg-[#050505]">
+        <div className="flex-1 p-3.5 sm:p-4 overflow-y-auto space-y-3 bg-[#050505]">
           {clientMessages.length === 0 ? (
             <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-2">
               <span className="text-xs text-[#c5a059] font-medium uppercase tracking-widest">
@@ -238,9 +238,9 @@ export const PublicChat: React.FC<PublicChatProps> = ({ onBack, currentClient })
                   key={msg.id}
                   className={`flex flex-col ${isFromClient ? 'items-end' : 'items-start'}`}
                 >
-                  <div className="max-w-[80%] space-y-1">
+                  <div className="max-w-[85%] space-y-1">
                     <div
-                      className={`p-4 rounded-2xl text-xs sm:text-sm font-light leading-relaxed ${
+                      className={`p-3 rounded-2xl text-xs sm:text-sm font-light leading-relaxed ${
                         isFromClient
                           ? 'bg-[#d4af37] text-black font-medium rounded-br-none shadow-sm'
                           : 'bg-[#141414] border border-white/5 text-neutral-200 rounded-bl-none'
@@ -249,7 +249,7 @@ export const PublicChat: React.FC<PublicChatProps> = ({ onBack, currentClient })
                       {msg.content}
 
                       {msg.attachment && (
-                        <div className="mt-2 rounded-xl overflow-hidden">
+                        <div className="mt-1.5 rounded-xl overflow-hidden">
                           {msg.attachment.type === 'audio' ? (
                             <AudioPlayer
                               src={msg.attachment.url}
@@ -257,7 +257,7 @@ export const PublicChat: React.FC<PublicChatProps> = ({ onBack, currentClient })
                               isFromAdminOrDono={!isFromClient}
                             />
                           ) : msg.attachment.type === 'image' ? (
-                            <img src={msg.attachment.url} alt="Anexo" className="max-h-52 w-full object-cover rounded-xl" />
+                            <img src={msg.attachment.url} alt="Anexo" className="max-h-48 w-full object-cover rounded-xl" />
                           ) : (
                             <a
                               href={msg.attachment.url}
@@ -285,10 +285,10 @@ export const PublicChat: React.FC<PublicChatProps> = ({ onBack, currentClient })
 
         {/* Prévia de Anexo */}
         {attachmentPreview && (
-          <div className="px-6 py-2 bg-[#121212] border-t border-white/5 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <img src={attachmentPreview} alt="Anexo" className="w-8 h-8 rounded-lg object-cover" />
-              <span className="text-xs text-neutral-300 font-light truncate max-w-[200px]">
+          <div className="px-4 py-2 bg-[#121212] border-t border-white/5 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <img src={attachmentPreview} alt="Anexo" className="w-7 h-7 rounded-lg object-cover" />
+              <span className="text-xs text-neutral-300 font-light truncate max-w-[180px]">
                 {selectedFile?.name}
               </span>
             </div>
@@ -310,14 +310,14 @@ export const PublicChat: React.FC<PublicChatProps> = ({ onBack, currentClient })
             e.preventDefault();
             handleSendMessage();
           }}
-          className="p-4 bg-[#0c0c0c] border-t border-white/5 flex items-center gap-3"
+          className="p-2.5 sm:p-3 bg-[#0c0c0c] border-t border-white/5 flex items-center gap-2"
         >
           <label
             htmlFor="chat-file-upload-pub"
-            className="p-2.5 text-neutral-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl cursor-pointer transition-colors shrink-0"
+            className="p-2 text-neutral-400 hover:text-white bg-white/5 hover:bg-white/10 rounded-xl cursor-pointer transition-colors shrink-0"
             title="Anexar imagem"
           >
-            <ImageIcon size={16} />
+            <ImageIcon size={15} />
             <input
               id="chat-file-upload-pub"
               type="file"
@@ -334,15 +334,15 @@ export const PublicChat: React.FC<PublicChatProps> = ({ onBack, currentClient })
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             placeholder="Digite sua mensagem..."
-            className="flex-1 bg-[#141414] border border-white/10 focus:border-[#c5a059] text-white rounded-xl px-4 py-3 text-xs sm:text-sm outline-none placeholder:text-neutral-500 transition-all font-light"
+            className="flex-1 bg-[#141414] border border-white/10 focus:border-[#c5a059] text-white rounded-xl px-3.5 py-2 text-xs sm:text-sm outline-none placeholder:text-neutral-500 transition-all font-light"
           />
 
           <button
             type="submit"
             disabled={!inputMessage.trim() && !attachmentPreview}
-            className="p-3 bg-[#d4af37] hover:bg-[#e5c158] disabled:opacity-30 text-black font-semibold rounded-xl transition-all shadow-md shrink-0"
+            className="p-2.5 bg-[#d4af37] hover:bg-[#e5c158] disabled:opacity-30 text-black font-semibold rounded-xl transition-all shadow-md shrink-0"
           >
-            <Send size={16} />
+            <Send size={15} />
           </button>
         </form>
       </div>

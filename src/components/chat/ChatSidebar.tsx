@@ -95,17 +95,17 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
   };
 
   return (
-    <div className="w-full md:w-80 lg:w-96 flex flex-col h-full bg-[#0a0a0a] border-r border-[#d4af37]/15">
+    <div className="w-full md:w-72 lg:w-80 flex flex-col h-full bg-[#0a0a0a] border-r border-[#d4af37]/15">
       {/* Search Header */}
-      <div className="p-4 border-b border-white/5 space-y-3">
+      <div className="p-3 border-b border-white/5 space-y-2">
         <div className="relative">
-          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
+          <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-neutral-500" />
           <input
             type="text"
-            placeholder="Buscar por nome, telefone ou mensagem..."
+            placeholder="Buscar nome ou telefone..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="w-full bg-[#121212] border border-white/10 rounded-xl pl-9 pr-4 py-2 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-[#d4af37]/60 transition-colors"
+            className="w-full bg-[#121212] border border-white/10 rounded-xl pl-8 pr-3 py-1.5 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-[#d4af37]/60 transition-colors"
           />
         </div>
 
@@ -242,7 +242,7 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                 key={conv.id}
                 onClick={() => onSelectConversation(conv.id)}
                 className={cn(
-                  "p-3.5 flex items-start gap-3 cursor-pointer transition-all relative group select-none",
+                  "p-2.5 flex items-start gap-2.5 cursor-pointer transition-all relative group select-none",
                   isSelected 
                     ? "bg-[#d4af37]/10 border-l-4 border-l-[#d4af37]" 
                     : "hover:bg-white/[0.03] border-l-4 border-l-transparent"
@@ -254,10 +254,10 @@ export const ChatSidebar: React.FC<ChatSidebarProps> = ({
                     <img
                       src={conv.participantPhotoUrl}
                       alt={conv.participantName}
-                      className="w-11 h-11 rounded-full object-cover border border-[#d4af37]/30"
+                      className="w-9 h-9 rounded-full object-cover border border-[#d4af37]/30"
                     />
                   ) : (
-                    <div className="w-11 h-11 rounded-full bg-[#161616] border border-[#d4af37]/30 flex items-center justify-center text-[#d4af37] font-semibold text-xs">
+                    <div className="w-9 h-9 rounded-full bg-[#161616] border border-[#d4af37]/30 flex items-center justify-center text-[#d4af37] font-semibold text-xs">
                       {getInitials(conv.participantName)}
                     </div>
                   )}

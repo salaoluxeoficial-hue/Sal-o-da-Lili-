@@ -127,18 +127,18 @@ export const AIAssistantButton: React.FC<AIAssistantButtonProps> = () => {
       {/* Botão Flutuante Minimalista & Sofisticado */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="fixed bottom-20 sm:bottom-24 right-4 sm:right-6 z-50 flex items-center gap-2 bg-[#0c0c0c] text-white border border-[#c5a059]/40 px-4 py-3 rounded-full shadow-2xl hover:border-[#c5a059] hover:scale-105 active:scale-95 transition-all duration-300 relative group"
+        className="fixed bottom-16 sm:bottom-20 right-3 sm:right-5 z-50 flex items-center gap-2 bg-[#0c0c0c] text-white border border-[#c5a059]/40 px-3.5 py-2.5 rounded-full shadow-2xl hover:border-[#c5a059] hover:scale-105 active:scale-95 transition-all duration-300 relative group"
         title="Atendimento Salão Luxe"
       >
-        <div className="w-6 h-6 rounded-full bg-[#c5a059]/20 flex items-center justify-center text-[#c5a059]">
-          <Headphones size={13} />
+        <div className="w-5 h-5 rounded-full bg-[#c5a059]/20 flex items-center justify-center text-[#c5a059]">
+          <Headphones size={12} />
         </div>
         <span className="text-xs font-light tracking-wide text-neutral-200 hidden sm:inline-block">
           Atendimento
         </span>
 
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 w-5 h-5 bg-[#c5a059] text-black rounded-full text-[10px] font-bold flex items-center justify-center border-2 border-black">
+          <span className="absolute -top-1 -right-1 w-4.5 h-4.5 bg-[#c5a059] text-black rounded-full text-[9px] font-bold flex items-center justify-center border-2 border-black">
             {unreadCount}
           </span>
         )}
@@ -146,17 +146,17 @@ export const AIAssistantButton: React.FC<AIAssistantButtonProps> = () => {
 
       {/* Modal do Balão Flutuante Compacto & Sofisticado */}
       {isOpen && (
-        <div className="fixed bottom-20 sm:bottom-24 right-3 sm:right-6 z-50 w-[90vw] sm:w-[350px] md:w-[360px] h-[450px] max-h-[75vh] bg-[#080808] border border-white/10 rounded-3xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
+        <div className="fixed bottom-16 sm:bottom-20 right-3 sm:right-5 z-50 w-[88vw] sm:w-[330px] md:w-[340px] h-[390px] sm:h-[420px] max-h-[60vh] bg-[#080808] border border-white/10 rounded-2xl shadow-2xl flex flex-col overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300">
           
           {/* Cabeçalho Discreto */}
-          <div className="bg-[#0c0c0c] border-b border-white/5 p-4 flex items-center justify-between shrink-0">
-            <div className="flex items-center gap-3">
-              <div className="w-2.5 h-2.5 rounded-full bg-[#c5a059]" />
+          <div className="bg-[#0c0c0c] border-b border-white/5 p-3 flex items-center justify-between shrink-0">
+            <div className="flex items-center gap-2.5">
+              <div className="w-2 h-2 rounded-full bg-[#c5a059]" />
               <div>
-                <h3 className="text-xs sm:text-sm font-medium text-white">
+                <h3 className="text-xs font-semibold text-white">
                   Atendimento Salão Luxe
                 </h3>
-                <p className="text-[10px] text-neutral-400 font-light mt-0.5">
+                <p className="text-[10px] text-neutral-400 font-light">
                   Recepção & Mensagens
                 </p>
               </div>
@@ -164,18 +164,18 @@ export const AIAssistantButton: React.FC<AIAssistantButtonProps> = () => {
 
             <button
               onClick={() => setIsOpen(false)}
-              className="p-1.5 text-neutral-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors shrink-0"
+              className="p-1 text-neutral-400 hover:text-white rounded-lg hover:bg-white/5 transition-colors shrink-0"
               title="Fechar"
             >
-              <X size={16} />
+              <X size={15} />
             </button>
           </div>
 
           {/* Conversa Limpa */}
-          <div className="flex-1 p-4 overflow-y-auto space-y-3.5 min-h-0 bg-[#050505]">
+          <div className="flex-1 p-3 overflow-y-auto space-y-2.5 min-h-0 bg-[#050505]">
             {liveChatMessages.length === 0 ? (
-              <div className="h-full flex flex-col items-center justify-center text-center p-4 space-y-2">
-                <span className="text-[11px] text-[#c5a059] font-medium tracking-wider uppercase">
+              <div className="h-full flex flex-col items-center justify-center text-center p-3 space-y-1.5">
+                <span className="text-[10px] text-[#c5a059] font-medium tracking-wider uppercase">
                   Canal Direto
                 </span>
                 <p className="text-neutral-400 text-xs font-light max-w-xs leading-relaxed">
@@ -192,9 +192,9 @@ export const AIAssistantButton: React.FC<AIAssistantButtonProps> = () => {
                     key={msg.id}
                     className={`flex flex-col ${isFromClient ? 'items-end' : 'items-start'}`}
                   >
-                    <div className="max-w-[88%] space-y-1">
+                    <div className="max-w-[88%] space-y-0.5">
                       <div
-                        className={`p-3 rounded-2xl text-xs font-light leading-relaxed ${
+                        className={`p-2.5 rounded-2xl text-xs font-light leading-relaxed ${
                           isFromClient
                             ? 'bg-[#d4af37] text-black font-medium rounded-br-none shadow-sm'
                             : 'bg-[#141414] border border-white/5 text-neutral-200 rounded-bl-none'
@@ -210,14 +210,14 @@ export const AIAssistantButton: React.FC<AIAssistantButtonProps> = () => {
                           <img 
                             src={msg.attachment.url} 
                             alt="Anexo" 
-                            className="max-h-40 w-full object-cover rounded-xl mb-1" 
+                            className="max-h-36 w-full object-cover rounded-xl mb-1" 
                           />
                         ) : msg.attachment ? (
                           <a
                             href={msg.attachment.url}
                             target="_blank"
                             rel="noreferrer"
-                            className="p-2 bg-black/20 text-xs underline block rounded-xl mb-1"
+                            className="p-1.5 bg-black/20 text-xs underline block rounded-xl mb-1"
                           >
                             📎 {msg.attachment.name}
                           </a>
@@ -234,7 +234,7 @@ export const AIAssistantButton: React.FC<AIAssistantButtonProps> = () => {
                         </span>
                         {isFromClient && (
                           <CheckCheck 
-                            size={11} 
+                            size={10} 
                             className={msg.status === 'lida' ? 'text-emerald-400' : 'text-neutral-500'} 
                           />
                         )}
@@ -253,7 +253,7 @@ export const AIAssistantButton: React.FC<AIAssistantButtonProps> = () => {
               e.preventDefault();
               handleSendTextMessage();
             }}
-            className="p-3 bg-[#0c0c0c] border-t border-white/5 flex items-center gap-2 shrink-0"
+            className="p-2.5 bg-[#0c0c0c] border-t border-white/5 flex items-center gap-1.5 shrink-0"
           >
             {/* Botão de Microfone Minimalista */}
             <AudioRecorder
@@ -267,17 +267,17 @@ export const AIAssistantButton: React.FC<AIAssistantButtonProps> = () => {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="Digite sua mensagem..."
-              className="flex-1 bg-[#141414] border border-white/10 focus:border-[#c5a059] text-white rounded-xl px-3 py-2 text-xs outline-none placeholder:text-neutral-500 font-light transition-all"
+              className="flex-1 bg-[#141414] border border-white/10 focus:border-[#c5a059] text-white rounded-xl px-2.5 py-1.5 text-xs outline-none placeholder:text-neutral-500 font-light transition-all"
             />
 
             {/* Botão de Envio Minimalista */}
             <button
               type="submit"
               disabled={!input.trim()}
-              className="p-2 bg-[#d4af37] hover:bg-[#e5c158] disabled:opacity-30 text-black font-semibold rounded-xl transition-all shadow-md shrink-0"
+              className="p-1.5 bg-[#d4af37] hover:bg-[#e5c158] disabled:opacity-30 text-black font-semibold rounded-xl transition-all shadow-md shrink-0"
               title="Enviar"
             >
-              <Send size={14} />
+              <Send size={13} />
             </button>
           </form>
         </div>

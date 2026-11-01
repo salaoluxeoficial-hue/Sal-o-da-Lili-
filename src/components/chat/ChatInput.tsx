@@ -111,21 +111,21 @@ export const ChatInput: React.FC<ChatInputProps> = ({
   );
 
   return (
-    <div className="p-4 bg-[#0c0c0c] border-t border-[#d4af37]/15 relative">
+    <div className="p-2.5 sm:p-3 bg-[#0c0c0c] border-t border-[#d4af37]/15 relative">
       {/* Quick Replies Popup Menu */}
       {showQuickMenu && (
         <div 
           ref={quickMenuRef}
-          className="absolute bottom-full left-4 right-4 sm:left-6 sm:right-auto sm:w-96 mb-2 bg-[#121212] border border-[#d4af37]/30 rounded-2xl shadow-2xl overflow-hidden z-30 flex flex-col max-h-80"
+          className="absolute bottom-full left-3 right-3 sm:left-4 sm:right-auto sm:w-80 mb-2 bg-[#121212] border border-[#d4af37]/30 rounded-2xl shadow-2xl overflow-hidden z-30 flex flex-col max-h-72"
         >
-          <div className="p-3 border-b border-white/10 bg-[#161616] flex items-center justify-between">
+          <div className="p-2.5 border-b border-white/10 bg-[#161616] flex items-center justify-between">
             <div className="flex items-center gap-2 text-xs font-semibold text-[#d4af37]">
-              <Zap size={14} />
+              <Zap size={13} />
               <span>Respostas Rápidas</span>
             </div>
             <button
               onClick={onOpenQuickRepliesModal}
-              className="text-[11px] text-neutral-400 hover:text-white underline"
+              className="text-[10px] text-neutral-400 hover:text-white underline"
             >
               Gerenciar modelos
             </button>
@@ -137,14 +137,14 @@ export const ChatInput: React.FC<ChatInputProps> = ({
               placeholder="Filtrar modelos ou digite /atalho..."
               value={quickFilter}
               onChange={(e) => setQuickFilter(e.target.value)}
-              className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-[#d4af37]/50"
+              className="w-full bg-white/5 border border-white/10 rounded-lg px-2.5 py-1 text-xs text-white placeholder:text-neutral-500 focus:outline-none focus:border-[#d4af37]/50"
               autoFocus
             />
           </div>
 
-          <div className="overflow-y-auto divide-y divide-white/5 p-1 max-h-56">
+          <div className="overflow-y-auto divide-y divide-white/5 p-1 max-h-48">
             {filteredQuickReplies.length === 0 ? (
-              <div className="p-4 text-center text-xs text-neutral-500">
+              <div className="p-3 text-center text-xs text-neutral-500">
                 Nenhum modelo encontrado.
               </div>
             ) : (
@@ -152,7 +152,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                 <button
                   key={qr.id}
                   onClick={() => handleSelectQuickReply(qr)}
-                  className="w-full text-left p-2.5 rounded-lg hover:bg-white/5 transition-colors flex flex-col gap-1 group"
+                  className="w-full text-left p-2 rounded-lg hover:bg-white/5 transition-colors flex flex-col gap-1 group"
                 >
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-white group-hover:text-[#d4af37] transition-colors">
@@ -162,7 +162,7 @@ export const ChatInput: React.FC<ChatInputProps> = ({
                       {qr.shortcut}
                     </span>
                   </div>
-                  <p className="text-[11px] text-neutral-400 line-clamp-2 leading-relaxed">
+                  <p className="text-[10px] text-neutral-400 line-clamp-2 leading-relaxed">
                     {qr.content}
                   </p>
                 </button>
@@ -174,17 +174,17 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
       {/* Attachment Staging Preview */}
       {attachment && (
-        <div className="mb-3 p-2.5 bg-[#171717] border border-[#d4af37]/30 rounded-xl flex items-center justify-between gap-3">
-          <div className="flex items-center gap-3 overflow-hidden">
+        <div className="mb-2 p-2 bg-[#171717] border border-[#d4af37]/30 rounded-xl flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 overflow-hidden">
             {attachment.type === 'image' ? (
               <img 
                 src={attachment.url} 
                 alt={attachment.name} 
-                className="w-12 h-12 rounded-lg object-cover border border-white/10 shrink-0" 
+                className="w-10 h-10 rounded-lg object-cover border border-white/10 shrink-0" 
               />
             ) : (
-              <div className="w-12 h-12 rounded-lg bg-[#d4af37]/10 text-[#d4af37] flex items-center justify-center shrink-0">
-                <Paperclip size={20} />
+              <div className="w-10 h-10 rounded-lg bg-[#d4af37]/10 text-[#d4af37] flex items-center justify-center shrink-0">
+                <Paperclip size={18} />
               </div>
             )}
             <div className="truncate">
@@ -195,18 +195,18 @@ export const ChatInput: React.FC<ChatInputProps> = ({
 
           <button
             onClick={() => setAttachment(null)}
-            className="p-1.5 text-neutral-400 hover:text-rose-400 hover:bg-white/5 rounded-lg transition-colors"
+            className="p-1 text-neutral-400 hover:text-rose-400 hover:bg-white/5 rounded-lg transition-colors"
             title="Remover anexo"
           >
-            <X size={16} />
+            <X size={14} />
           </button>
         </div>
       )}
 
       {/* Input Row */}
-      <div className="flex items-end gap-2 bg-[#141414] border border-white/10 rounded-2xl p-2 focus-within:border-[#d4af37]/60 transition-all">
+      <div className="flex items-end gap-1.5 bg-[#141414] border border-white/10 rounded-xl p-1.5 focus-within:border-[#d4af37]/60 transition-all">
         {/* Attachment & Quick Replies buttons */}
-        <div className="flex items-center gap-1 shrink-0 pb-1">
+        <div className="flex items-center gap-0.5 shrink-0 pb-0.5">
           <input
             type="file"
             ref={fileInputRef}
@@ -217,25 +217,26 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
-            className="p-2 text-neutral-400 hover:text-[#d4af37] hover:bg-white/5 rounded-xl transition-colors"
+            className="p-1.5 text-neutral-400 hover:text-[#d4af37] hover:bg-white/5 rounded-lg transition-colors"
             title="Anexar foto ou documento"
           >
-            <Paperclip size={18} />
+            <Paperclip size={16} />
           </button>
 
           <button
             type="button"
             onClick={() => setShowQuickMenu(!showQuickMenu)}
-            className="p-2 text-neutral-400 hover:text-[#d4af37] hover:bg-white/5 rounded-xl transition-colors relative"
+            className="p-1.5 text-neutral-400 hover:text-[#d4af37] hover:bg-white/5 rounded-lg transition-colors relative"
             title="Respostas Rápidas"
           >
-            <Zap size={18} className={showQuickMenu ? 'text-[#d4af37]' : ''} />
+            <Zap size={16} className={showQuickMenu ? 'text-[#d4af37]' : ''} />
           </button>
 
           <AudioRecorder
             onAudioRecorded={(audioAtt) => {
               onSendMessage('', audioAtt);
             }}
+            isCompact={true}
           />
         </div>
 
@@ -247,12 +248,12 @@ export const ChatInput: React.FC<ChatInputProps> = ({
             setText(e.target.value);
             // Auto resize height
             e.target.style.height = 'auto';
-            e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+            e.target.style.height = `${Math.min(e.target.scrollHeight, 100)}px`;
           }}
           onKeyDown={handleKeyDown}
           rows={1}
-          placeholder={`Mensagem para enviar como ${senderName}... (Enter envia)`}
-          className="flex-1 bg-transparent border-none outline-none text-xs sm:text-sm text-white placeholder:text-neutral-500 resize-none py-2 px-1 max-h-32 min-h-[38px] leading-relaxed"
+          placeholder={`Mensagem como ${senderName}...`}
+          className="flex-1 bg-transparent border-none outline-none text-xs text-white placeholder:text-neutral-500 resize-none py-1.5 px-1 max-h-24 min-h-[32px] leading-relaxed"
         />
 
         {/* Send Button */}
@@ -260,15 +261,15 @@ export const ChatInput: React.FC<ChatInputProps> = ({
           type="button"
           onClick={handleSend}
           disabled={!text.trim() && !attachment}
-          className="p-2.5 bg-[#d4af37] text-black rounded-xl hover:bg-[#e5c158] disabled:opacity-30 disabled:cursor-not-allowed transition-all font-semibold shrink-0 shadow-md shadow-[#d4af37]/20"
+          className="p-2 bg-[#d4af37] text-black rounded-lg hover:bg-[#e5c158] disabled:opacity-30 disabled:cursor-not-allowed transition-all font-semibold shrink-0 shadow-md shadow-[#d4af37]/20"
           title="Enviar mensagem"
         >
-          <Send size={16} />
+          <Send size={15} />
         </button>
       </div>
 
-      <div className="flex items-center justify-between mt-2 px-1 text-[11px] text-neutral-500">
-        <span>Pressione <kbd className="font-mono bg-white/5 px-1 rounded text-neutral-400">Enter</kbd> para enviar, <kbd className="font-mono bg-white/5 px-1 rounded text-neutral-400">Shift+Enter</kbd> para nova linha</span>
+      <div className="flex items-center justify-between mt-1 px-1 text-[10px] text-neutral-500">
+        <span>Enter envia • Shift+Enter nova linha</span>
         <span className="text-neutral-400">
           Remetente: <strong className="text-[#d4af37]">{senderName}</strong>
         </span>

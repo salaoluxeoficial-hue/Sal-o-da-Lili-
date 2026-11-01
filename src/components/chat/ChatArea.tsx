@@ -144,15 +144,15 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
   return (
     <div className="flex-1 flex flex-col h-full bg-[#070707] overflow-hidden relative">
       {/* Chat Header */}
-      <div className="p-4 bg-[#0a0a0a] border-b border-[#d4af37]/15 flex items-center justify-between gap-3 shrink-0 z-10 flex-wrap sm:flex-nowrap">
-        <div className="flex items-center gap-3 min-w-0">
+      <div className="px-3.5 py-2.5 bg-[#0a0a0a] border-b border-[#d4af37]/15 flex items-center justify-between gap-2 shrink-0 z-10 flex-wrap sm:flex-nowrap">
+        <div className="flex items-center gap-2.5 min-w-0">
           {onBackToList && (
             <button
               onClick={onBackToList}
-              className="md:hidden p-2 text-neutral-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
+              className="md:hidden p-1.5 text-neutral-400 hover:text-white hover:bg-white/5 rounded-lg transition-colors"
               title="Voltar para a lista"
             >
-              <ArrowLeft size={18} />
+              <ArrowLeft size={16} />
             </button>
           )}
 
@@ -162,10 +162,10 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
               <img
                 src={conversation.participantPhotoUrl}
                 alt={conversation.participantName}
-                className="w-10 h-10 rounded-full object-cover border border-[#d4af37]/40 shadow-sm"
+                className="w-8 h-8 rounded-full object-cover border border-[#d4af37]/40 shadow-sm"
               />
             ) : (
-              <div className="w-10 h-10 rounded-full bg-[#161616] border border-[#d4af37]/40 flex items-center justify-center text-[#d4af37] font-semibold text-xs shadow-sm">
+              <div className="w-8 h-8 rounded-full bg-[#161616] border border-[#d4af37]/40 flex items-center justify-center text-[#d4af37] font-semibold text-[11px] shadow-sm">
                 {getInitials(conversation.participantName)}
               </div>
             )}
@@ -355,30 +355,29 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
       )}
 
       {/* Message History Feed */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+      <div className="flex-1 overflow-y-auto p-3 sm:p-4 space-y-4">
         {messages.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center p-8">
-            <div className="w-14 h-14 rounded-2xl bg-[#d4af37]/10 text-[#d4af37] border border-[#d4af37]/20 flex items-center justify-center mb-3">
-              <UserCheck size={28} />
+          <div className="h-full flex flex-col items-center justify-center text-center p-6">
+            <div className="w-12 h-12 rounded-2xl bg-[#d4af37]/10 text-[#d4af37] border border-[#d4af37]/20 flex items-center justify-center mb-2">
+              <UserCheck size={24} />
             </div>
-            <h4 className="text-white font-bold text-base mb-1">Início da Conversa</h4>
-            <p className="text-neutral-400 text-xs max-w-sm leading-relaxed mb-4">
-              Canal de mensagens diretas entre o Salão Luxe e <strong>{conversation.participantName}</strong>. 
-              Envie fotos de inspiração, avisos de horário ou orientações de atendimento.
+            <h4 className="text-white font-bold text-sm mb-1">Início da Conversa</h4>
+            <p className="text-neutral-400 text-xs max-w-sm leading-relaxed mb-3">
+              Canal de mensagens diretas entre o Salão Luxe e <strong>{conversation.participantName}</strong>.
             </p>
             <button
               onClick={() => handleSendMessage(`Olá, ${conversation.participantName}! Estamos à disposição pelo canal oficial do Salão Luxe.`)}
-              className="px-4 py-2 bg-white/5 hover:bg-[#d4af37]/15 border border-[#d4af37]/30 text-[#d4af37] rounded-xl text-xs font-semibold transition-colors"
+              className="px-3 py-1.5 bg-white/5 hover:bg-[#d4af37]/15 border border-[#d4af37]/30 text-[#d4af37] rounded-xl text-xs font-semibold transition-colors"
             >
               Enviar Saudação Inicial
             </button>
           </div>
         ) : (
           groupedMessages.map((group, gIdx) => (
-            <div key={gIdx} className="space-y-4">
+            <div key={gIdx} className="space-y-3">
               {/* Date Separator Pill */}
               <div className="flex justify-center">
-                <span className="px-3 py-1 rounded-full text-[11px] font-medium bg-[#141414] text-neutral-400 border border-white/5 shadow-sm">
+                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-medium bg-[#141414] text-neutral-400 border border-white/5 shadow-sm">
                   {group.date}
                 </span>
               </div>
@@ -396,12 +395,12 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                     )}
                   >
                     {/* Sender Label */}
-                    <div className="flex items-center gap-1.5 mb-1 px-1">
-                      <span className="text-[11px] font-semibold text-neutral-400">
+                    <div className="flex items-center gap-1.5 mb-0.5 px-1">
+                      <span className="text-[10px] font-semibold text-neutral-400">
                         {msg.senderName}
                       </span>
                       <span className={cn(
-                        "text-[9px] uppercase px-1.5 py-0.2 rounded font-bold",
+                        "text-[9px] uppercase px-1 py-0.2 rounded font-bold",
                         msg.senderRole === 'dono'
                           ? "bg-amber-500/25 text-amber-300 border border-amber-500/40"
                           : msg.senderRole === 'admin'
@@ -417,7 +416,7 @@ export const ChatArea: React.FC<ChatAreaProps> = ({
                     {/* Bubble */}
                     <div
                       className={cn(
-                        "rounded-2xl p-3.5 shadow-md text-xs sm:text-sm leading-relaxed",
+                        "rounded-2xl p-2.5 sm:p-3 shadow-md text-xs sm:text-sm leading-relaxed",
                         isFromAdminOrDono
                           ? "bg-gradient-to-br from-[#1c180a] to-[#121212] border border-[#d4af37]/35 text-white rounded-tr-none"
                           : "bg-[#181818] border border-white/10 text-white rounded-tl-none"

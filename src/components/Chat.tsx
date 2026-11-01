@@ -200,101 +200,101 @@ export const Chat: React.FC = () => {
   }, [clients, professionals, newChatSearch]);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Module Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <div className="flex items-center gap-2">
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-white">
               Gerenciamento de Conversas & Chat ADM
             </h1>
-            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#d4af37]/15 text-[#d4af37] border border-[#d4af37]/30">
+            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#d4af37]/15 text-[#d4af37] border border-[#d4af37]/30">
               Painel Restrito
             </span>
           </div>
-          <p className="text-neutral-400 text-xs sm:text-sm mt-1">
-            Atendimento centralizado para mensagens de clientes e comunicação em tempo real com os profissionais.
+          <p className="text-neutral-400 text-xs mt-0.5">
+            Atendimento centralizado para mensagens de clientes e comunicação com profissionais.
           </p>
         </div>
 
         {/* Header Action Buttons */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setIsBrandingModalOpen(true)}
-            className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all hover:border-[#d4af37]/40"
+            className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all hover:border-[#d4af37]/40"
             title="Personalizar fotos, zoom e enquadramento dos atendimentos"
           >
-            <Sparkles size={16} className="text-[#d4af37]" />
-            <span>Personalizar Chats</span>
+            <Sparkles size={14} className="text-[#d4af37]" />
+            <span>Personalizar</span>
           </button>
 
           <button
             onClick={() => setIsQuickRepliesModalOpen(true)}
-            className="px-4 py-2 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-xl text-xs font-semibold flex items-center gap-2 transition-all hover:border-[#d4af37]/40"
+            className="px-3 py-1.5 bg-white/5 hover:bg-white/10 text-white border border-white/10 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all hover:border-[#d4af37]/40"
           >
-            <Zap size={16} className="text-[#d4af37]" />
+            <Zap size={14} className="text-[#d4af37]" />
             <span>Respostas Rápidas</span>
           </button>
 
           <button
             onClick={() => setIsNewChatModalOpen(true)}
-            className="px-4 py-2 bg-[#d4af37] hover:bg-[#b8860b] text-black rounded-xl text-xs font-semibold flex items-center gap-2 transition-all shadow-md shadow-[#d4af37]/20"
+            className="px-3 py-1.5 bg-[#d4af37] hover:bg-[#b8860b] text-black rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-md shadow-[#d4af37]/20"
           >
-            <Plus size={16} />
+            <Plus size={14} />
             <span>Nova Conversa</span>
           </button>
         </div>
       </div>
 
       {/* KPI Stats Cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-[#0c0c0c] border border-white/10 rounded-2xl p-4 flex items-center justify-between">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="bg-[#0c0c0c] border border-white/10 rounded-xl p-3 flex items-center justify-between">
           <div>
-            <span className="text-neutral-400 text-xs font-medium block">Total de Conversas</span>
-            <span className="text-lg sm:text-xl font-bold text-white mt-1 block">{totalConversationsCount}</span>
+            <span className="text-neutral-400 text-[11px] font-medium block">Total Conversas</span>
+            <span className="text-base sm:text-lg font-bold text-white mt-0.5 block">{totalConversationsCount}</span>
             <span className="text-[10px] text-[#d4af37]">Canais ativos</span>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-[#d4af37]/10 text-[#d4af37] flex items-center justify-center border border-[#d4af37]/20">
-            <MessageSquare size={18} />
+          <div className="w-8 h-8 rounded-lg bg-[#d4af37]/10 text-[#d4af37] flex items-center justify-center border border-[#d4af37]/20">
+            <MessageSquare size={16} />
           </div>
         </div>
 
-        <div className="bg-[#0c0c0c] border border-white/10 rounded-2xl p-4 flex items-center justify-between">
+        <div className="bg-[#0c0c0c] border border-white/10 rounded-xl p-3 flex items-center justify-between">
           <div>
-            <span className="text-neutral-400 text-xs font-medium block">Clientes Conectados</span>
-            <span className="text-lg sm:text-xl font-bold text-white mt-1 block">{clientConversationsCount}</span>
-            <span className="text-[10px] text-blue-400">Atendimento e pós-venda</span>
+            <span className="text-neutral-400 text-[11px] font-medium block">Clientes</span>
+            <span className="text-base sm:text-lg font-bold text-white mt-0.5 block">{clientConversationsCount}</span>
+            <span className="text-[10px] text-blue-400">Atendimento VIP</span>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-blue-500/10 text-blue-400 flex items-center justify-center border border-blue-500/20">
-            <UserSquare2 size={18} />
+          <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center border border-blue-500/20">
+            <UserSquare2 size={16} />
           </div>
         </div>
 
-        <div className="bg-[#0c0c0c] border border-white/10 rounded-2xl p-4 flex items-center justify-between">
+        <div className="bg-[#0c0c0c] border border-white/10 rounded-xl p-3 flex items-center justify-between">
           <div>
-            <span className="text-neutral-400 text-xs font-medium block">Equipe & Profissionais</span>
-            <span className="text-lg sm:text-xl font-bold text-white mt-1 block">{proConversationsCount}</span>
+            <span className="text-neutral-400 text-[11px] font-medium block">Equipe</span>
+            <span className="text-base sm:text-lg font-bold text-white mt-0.5 block">{proConversationsCount}</span>
             <span className="text-[10px] text-emerald-400">Comunicação interna</span>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20">
-            <Users size={18} />
+          <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center border border-emerald-500/20">
+            <Users size={16} />
           </div>
         </div>
 
-        <div className="bg-[#0c0c0c] border border-white/10 rounded-2xl p-4 flex items-center justify-between">
+        <div className="bg-[#0c0c0c] border border-white/10 rounded-xl p-3 flex items-center justify-between">
           <div>
-            <span className="text-neutral-400 text-xs font-medium block">Mensagens Pendentes</span>
-            <span className="text-lg sm:text-xl font-bold text-white mt-1 block">{totalUnreadCount}</span>
-            <span className="text-[10px] text-rose-400">Não lidas pela gerência</span>
+            <span className="text-neutral-400 text-[11px] font-medium block">Não Lidas</span>
+            <span className="text-base sm:text-lg font-bold text-white mt-0.5 block">{totalUnreadCount}</span>
+            <span className="text-[10px] text-rose-400">Pendentes</span>
           </div>
-          <div className="w-9 h-9 rounded-xl bg-rose-500/10 text-rose-400 flex items-center justify-center border border-rose-500/20">
-            <MessageCircle size={18} />
+          <div className="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-400 flex items-center justify-center border border-rose-500/20">
+            <MessageCircle size={16} />
           </div>
         </div>
       </div>
 
       {/* Main Chat Interface Container */}
-      <div className="bg-[#0a0a0a] border border-[#d4af37]/20 rounded-2xl overflow-hidden shadow-2xl h-[580px] flex flex-col md:flex-row">
+      <div className="bg-[#0a0a0a] border border-[#d4af37]/20 rounded-2xl overflow-hidden shadow-2xl h-[460px] sm:h-[500px] max-h-[65vh] flex flex-col md:flex-row">
         {/* Left Sidebar */}
         <div className={cn(
           "h-full md:block",
