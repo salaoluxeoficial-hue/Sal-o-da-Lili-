@@ -1,6 +1,7 @@
 -- ==============================================================================
--- SALÃO LUXE - ESQUEMA SQL SUPABASE HARDENED COM TRIGGERS DE PROTEÇÃO & RLS ESTRITO
+-- SALÃO LUXE - ESQUEMA SQL SUPABASE COMPLETO & HARDENED
 -- PROJETO SUPABASE: dxbbnoxwhxsmfjkyxfir
+-- URL: https://dxbbnoxwhxsmfjkyxfir.supabase.co
 -- ==============================================================================
 
 -- 1. TABELA DE ROLES DO SERVIDOR (public.user_roles)
@@ -11,7 +12,7 @@ CREATE TABLE IF NOT EXISTS public.user_roles (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 2. TABELA DE CONVERSAS (public.chat_conversations)
+-- 2. TABELA DE CONVERSAS DO CHAT (public.chat_conversations)
 CREATE TABLE IF NOT EXISTS public.chat_conversations (
     id TEXT PRIMARY KEY,
     type TEXT NOT NULL CHECK (type IN ('cliente', 'profissional')),
@@ -36,7 +37,7 @@ CREATE TABLE IF NOT EXISTS public.chat_conversations (
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- 3. TABELA DE MENSAGENS (public.chat_messages)
+-- 3. TABELA DE MENSAGENS DO CHAT (public.chat_messages)
 CREATE TABLE IF NOT EXISTS public.chat_messages (
     id TEXT PRIMARY KEY,
     conversation_id TEXT NOT NULL REFERENCES public.chat_conversations(id) ON DELETE CASCADE,
@@ -51,17 +52,130 @@ CREATE TABLE IF NOT EXISTS public.chat_messages (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- 4. TABELA DE CLIENTES (public.clients)
+CREATE TABLE IF NOT EXISTS public.clients (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    email TEXT,
+    phone TEXT,
+    whatsapp TEXT,
+    photo_url TEXT,
+    birth_date DATE,
+    status TEXT DEFAULT 'ativo' CHECK (status IN ('ativo', 'bloqueado')),
+    has_portal_access BOOLEAN DEFAULT FALSE,
+    password TEXT,
+    last_login_at TIMESTAMPTZ,
+    notes TEXT,
+    preferences TEXT,
+    allergies TEXT,
+    favorite_service_ids JSONB DEFAULT '[]'::jsonb,
+    total_spent NUMERIC(10,2) DEFAULT 0.00,
+    last_visit DATE,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 5. TABELA DE PROFISSIONAIS (public.professionals)
+CREATE TABLE IF NOT EXISTS public.professionals (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    role TEXT NOT NULL,
+    specialties JSONB DEFAULT '[]'::jsonb,
+    phone TEXT,
+    email TEXT,
+    photo_url TEXT,
+    status TEXT DEFAULT 'ativo' CHECK (status IN ('ativo', 'inativo', 'ferias')),
+    commission_rate NUMERIC(5,2) DEFAULT 30.00,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 6. TABELA DE AGENDAMENTOS (public.appointments)
+CREATE TABLE IF NOT EXISTS public.appointments (
+    id TEXT PRIMARY KEY,
+    client_id TEXT NOT NULL REFERENCES public.clients(id) ON DELETE CASCADE,
+    client_name TEXT NOT NULL,
+    client_phone TEXT,
+    client_email TEXT,
+    professional_id TEXT NOT NULL REFERENCES public.professionals(id) ON DELETE CASCADE,
+    professional_name TEXT NOT NULL,
+    service_ids JSONB DEFAULT '[]'::jsonb,
+    service_names JSONB DEFAULT '[]'::jsonb,
+    date DATE NOT NULL,
+    start_time TEXT NOT NULL,
+    end_time TEXT NOT NULL,
+    total_duration INTEGER NOT NULL,
+    total_price NUMERIC(10,2) NOT NULL,
+    status TEXT DEFAULT 'aguardando' CHECK (status IN ('aguardando', 'confirmado', 'em_atendimento', 'concluido', 'cancelado')),
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 7. TABELA DE PRODUTOS / ESTOQUE (public.products)
+CREATE TABLE IF NOT EXISTS public.products (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    brand TEXT,
+    category TEXT NOT NULL CHECK (category IN ('shampoo', 'condicionador', 'mascara', 'oleo', 'coloracao', 'finalizador', 'outros')),
+    sku TEXT UNIQUE,
+    barcode TEXT,
+    quantity INTEGER DEFAULT 0 CHECK (quantity >= 0),
+    min_quantity INTEGER DEFAULT 5 CHECK (min_quantity >= 0),
+    cost_price NUMERIC(10,2) DEFAULT 0.00,
+    sale_price NUMERIC(10,2) DEFAULT 0.00,
+    unit TEXT DEFAULT 'unidade',
+    supplier TEXT,
+    photo_url TEXT,
+    description TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 8. TABELA DE TRANSAÇÕES FINANCEIRAS (public.financial_transactions)
+CREATE TABLE IF NOT EXISTS public.financial_transactions (
+    id TEXT PRIMARY KEY,
+    description TEXT NOT NULL,
+    type TEXT NOT NULL CHECK (type IN ('receita', 'despesa')),
+    category TEXT NOT NULL,
+    amount NUMERIC(10,2) NOT NULL,
+    date DATE NOT NULL,
+    payment_method TEXT NOT NULL CHECK (payment_method IN ('pix', 'cartao_credito', 'cartao_debito', 'dinheiro')),
+    status TEXT DEFAULT 'concluido' CHECK (status IN ('pendente', 'concluido', 'cancelado')),
+    client_id TEXT,
+    professional_id TEXT,
+    invoice_number TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 9. TABELA DE SERVIÇOS DO SALÃO (public.services)
+CREATE TABLE IF NOT EXISTS public.services (
+    id TEXT PRIMARY KEY,
+    name TEXT NOT NULL,
+    category TEXT NOT NULL,
+    duration_minutes INTEGER NOT NULL,
+    price NUMERIC(10,2) NOT NULL,
+    description TEXT,
+    status TEXT DEFAULT 'ativo' CHECK (status IN ('ativo', 'inativo')),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ÍNDICES DE PERFORMANCE E CONSULTAS
 CREATE INDEX IF NOT EXISTS idx_chat_messages_conversation_id ON public.chat_messages(conversation_id);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_created_at ON public.chat_messages(created_at ASC);
 CREATE INDEX IF NOT EXISTS idx_chat_messages_sender_recipient ON public.chat_messages(sender_id, recipient_id);
 CREATE INDEX IF NOT EXISTS idx_chat_conversations_participant_id ON public.chat_conversations(participant_id);
 CREATE INDEX IF NOT EXISTS idx_chat_conversations_assigned_prof ON public.chat_conversations(assigned_professional_id);
-CREATE INDEX IF NOT EXISTS idx_chat_conversations_type ON public.chat_conversations(type);
 CREATE INDEX IF NOT EXISTS idx_chat_conversations_updated_at ON public.chat_conversations(updated_at DESC);
+CREATE INDEX IF NOT EXISTS idx_appointments_date ON public.appointments(date);
+CREATE INDEX IF NOT EXISTS idx_appointments_professional_id ON public.appointments(professional_id);
+CREATE INDEX IF NOT EXISTS idx_appointments_client_id ON public.appointments(client_id);
+CREATE INDEX IF NOT EXISTS idx_financial_transactions_date ON public.financial_transactions(date);
 
 -- ==============================================================================
--- 4. FUNÇÕES ADMINISTRATIVAS COM VERIFICAÇÃO SERVICE_ROLE E search_path SEGURO
+-- FUNÇÕES DE SEGURANÇA E AUXILIARES COM search_path SEGURO
 -- ==============================================================================
 
 -- Verifica se o usuário autenticado atual (auth.uid()) é Administrador ou Dono
@@ -115,7 +229,6 @@ BEGIN
         RAISE EXCEPTION 'Papel inválido especificado.';
     END IF;
 
-    -- Exige estritamente perfil de administrador verificado ou chave service_role do servidor
     IF NOT public.is_authenticated_admin() THEN
         RAISE EXCEPTION 'Acesso negado: apenas administradores autenticados ou a chave service_role podem atribuir papéis.';
     END IF;
@@ -127,7 +240,23 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public, pg_temp;
 
--- REVOGAÇÃO DE PERMISSÕES PÚBLICAS/ANON E CONCESSÃO RESTRITA PARA FUNÇÕES
+-- Atribuição automática do papel 'cliente' ao registrar novo usuário em auth.users
+CREATE OR REPLACE FUNCTION public.handle_new_user_role()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public, pg_temp
+AS $$
+BEGIN
+    INSERT INTO public.user_roles (user_id, role, created_at, updated_at)
+    VALUES (NEW.id, 'cliente', NOW(), NOW())
+    ON CONFLICT (user_id) DO NOTHING;
+
+    RETURN NEW;
+END;
+$$;
+
+-- REVOGAÇÃO DE PERMISSÕES PÚBLICAS/ANON
 REVOKE EXECUTE ON FUNCTION public.is_authenticated_admin() FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.is_authenticated_admin() TO authenticated, service_role;
 
@@ -137,13 +266,19 @@ GRANT EXECUTE ON FUNCTION public.is_authenticated_professional() TO authenticate
 REVOKE EXECUTE ON FUNCTION public.assign_user_role(UUID, TEXT) FROM PUBLIC, anon;
 GRANT EXECUTE ON FUNCTION public.assign_user_role(UUID, TEXT) TO authenticated, service_role;
 
+REVOKE ALL ON FUNCTION public.handle_new_user_role() FROM PUBLIC, anon, authenticated;
+
+-- TRIGGER EM auth.users
+DROP TRIGGER IF EXISTS trg_on_auth_user_created_assign_role ON auth.users;
+CREATE TRIGGER trg_on_auth_user_created_assign_role
+    AFTER INSERT ON auth.users
+    FOR EACH ROW
+    EXECUTE FUNCTION public.handle_new_user_role();
+
 -- ==============================================================================
--- 5. TRIGGERS DE PROTEÇÃO DE ESTRUTURA, IDENTIFICAÇÃO E IMUTABILIDADE
+-- TRIGGERS DE PROTEÇÃO DE IMUTABILIDADE DO CHAT
 -- ==============================================================================
 
--- A) Trigger para Tabela chat_conversations:
--- Protege dados estruturais, de atribuição e de identificação do participante (nome, telefone, whatsapp, email, foto, descrição)
--- contra alterações por usuários não-administradores, mantendo liberadas apenas atualizações de atendimento (last_message, unread_counts, is_online, updated_at).
 CREATE OR REPLACE FUNCTION public.protect_chat_conversation_immutability()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -177,8 +312,6 @@ CREATE TRIGGER trg_protect_chat_conversation_immutability
     FOR EACH ROW
     EXECUTE FUNCTION public.protect_chat_conversation_immutability();
 
--- B) Trigger para Tabela chat_messages:
--- Garante imutabilidade total de conteúdo, autoria, destinatário e data, permitindo apenas avanços de status sem retrocesso.
 CREATE OR REPLACE FUNCTION public.protect_chat_message_immutability()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -213,208 +346,135 @@ CREATE TRIGGER trg_protect_chat_message_immutability
     FOR EACH ROW
     EXECUTE FUNCTION public.protect_chat_message_immutability();
 
-REVOKE EXECUTE ON FUNCTION public.protect_chat_conversation_immutability() FROM PUBLIC, anon;
-REVOKE EXECUTE ON FUNCTION public.protect_chat_message_immutability() FROM PUBLIC, anon;
-
 -- ==============================================================================
--- 6. PERMISSÕES DE TABELAS (GRANT) E ROW LEVEL SECURITY (RLS)
+-- PERMISSÕES DE TABELAS (GRANT) E ROW LEVEL SECURITY (RLS)
 -- ==============================================================================
 
--- Revogar permissões públicas/anônimas em nível de tabela
 REVOKE ALL ON TABLE public.user_roles FROM PUBLIC, anon;
 REVOKE ALL ON TABLE public.chat_conversations FROM PUBLIC, anon;
 REVOKE ALL ON TABLE public.chat_messages FROM PUBLIC, anon;
 
--- Conceder permissões para os papéis autenticados e service_role (geridos via RLS)
 GRANT SELECT ON TABLE public.user_roles TO authenticated;
 GRANT ALL ON TABLE public.user_roles TO service_role;
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.chat_conversations TO authenticated, service_role;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.chat_messages TO authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.clients TO authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.professionals TO authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.appointments TO authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.products TO authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.financial_transactions TO authenticated, service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.services TO authenticated, service_role;
 
 ALTER TABLE public.user_roles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chat_conversations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.chat_messages ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.clients ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.professionals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.appointments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.products ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.financial_transactions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.services ENABLE ROW LEVEL SECURITY;
 
--- Limpeza idempotente de políticas anteriores
-DROP POLICY IF EXISTS "Permitir leitura de conversas" ON public.chat_conversations;
-DROP POLICY IF EXISTS "Permitir inserção e edição de conversas" ON public.chat_conversations;
-DROP POLICY IF EXISTS "Acesso seguro a conversas" ON public.chat_conversations;
-DROP POLICY IF EXISTS "Conversas_Leitura_Autorizada" ON public.chat_conversations;
-DROP POLICY IF EXISTS "Conversas_Escrita_Autorizada" ON public.chat_conversations;
-DROP POLICY IF EXISTS "Conversas_Select_Policy" ON public.chat_conversations;
-DROP POLICY IF EXISTS "Conversas_Insert_Policy" ON public.chat_conversations;
-DROP POLICY IF EXISTS "Conversas_Update_Policy" ON public.chat_conversations;
-DROP POLICY IF EXISTS "Conversas_Delete_Policy" ON public.chat_conversations;
-
-DROP POLICY IF EXISTS "Permitir leitura de mensagens" ON public.chat_messages;
-DROP POLICY IF EXISTS "Permitir inserção e edição de mensagens" ON public.chat_messages;
-DROP POLICY IF EXISTS "Acesso seguro a mensagens" ON public.chat_messages;
-DROP POLICY IF EXISTS "Mensagens_Leitura_Autorizada" ON public.chat_messages;
-DROP POLICY IF EXISTS "Mensagens_Escrita_Autorizada" ON public.chat_messages;
-DROP POLICY IF EXISTS "Mensagens_Select_Policy" ON public.chat_messages;
-DROP POLICY IF EXISTS "Mensagens_Insert_Policy" ON public.chat_messages;
-DROP POLICY IF EXISTS "Mensagens_Update_Policy" ON public.chat_messages;
-DROP POLICY IF EXISTS "Mensagens_Delete_Policy" ON public.chat_messages;
-
+-- POLÍTICAS RLS DA TABELA user_roles
 DROP POLICY IF EXISTS "UserRoles_Select_Policy" ON public.user_roles;
-
--- POLÍTICA PARA TABELA user_roles
 CREATE POLICY "UserRoles_Select_Policy" ON public.user_roles
-    FOR SELECT
-    USING (
-        auth.uid() IS NOT NULL AND (user_id = auth.uid() OR public.is_authenticated_admin())
-    );
+    FOR SELECT TO authenticated
+    USING (auth.uid() IS NOT NULL AND (user_id = auth.uid() OR public.is_authenticated_admin()));
 
--- POLÍTICAS PARA TABELA chat_conversations
+-- POLÍTICAS RLS DO CHAT
+DROP POLICY IF EXISTS "Conversas_Select_Policy" ON public.chat_conversations;
 CREATE POLICY "Conversas_Select_Policy" ON public.chat_conversations
-    FOR SELECT
+    FOR SELECT TO authenticated
     USING (
         auth.uid() IS NOT NULL
-        AND (
-            participant_id = auth.uid()::text
-            OR assigned_professional_id = auth.uid()::text
-            OR public.is_authenticated_admin()
-        )
+        AND (participant_id = auth.uid()::text OR assigned_professional_id = auth.uid()::text OR public.is_authenticated_admin())
     );
 
+DROP POLICY IF EXISTS "Conversas_Insert_Policy" ON public.chat_conversations;
 CREATE POLICY "Conversas_Insert_Policy" ON public.chat_conversations
-    FOR INSERT
+    FOR INSERT TO authenticated
     WITH CHECK (
         auth.uid() IS NOT NULL
-        AND (
-            participant_id = auth.uid()::text
-            OR public.is_authenticated_admin()
-        )
+        AND (participant_id = auth.uid()::text OR public.is_authenticated_admin())
     );
 
+DROP POLICY IF EXISTS "Conversas_Update_Policy" ON public.chat_conversations;
 CREATE POLICY "Conversas_Update_Policy" ON public.chat_conversations
-    FOR UPDATE
+    FOR UPDATE TO authenticated
     USING (
         auth.uid() IS NOT NULL
-        AND (
-            participant_id = auth.uid()::text
-            OR assigned_professional_id = auth.uid()::text
-            OR public.is_authenticated_admin()
-        )
-    )
-    WITH CHECK (
-        auth.uid() IS NOT NULL
-        AND (
-            participant_id = auth.uid()::text
-            OR assigned_professional_id = auth.uid()::text
-            OR public.is_authenticated_admin()
-        )
+        AND (participant_id = auth.uid()::text OR assigned_professional_id = auth.uid()::text OR public.is_authenticated_admin())
     );
 
-CREATE POLICY "Conversas_Delete_Policy" ON public.chat_conversations
-    FOR DELETE
-    USING (
-        auth.uid() IS NOT NULL AND public.is_authenticated_admin()
-    );
-
--- POLÍTICAS PARA TABELA chat_messages
-
+DROP POLICY IF EXISTS "Mensagens_Select_Policy" ON public.chat_messages;
 CREATE POLICY "Mensagens_Select_Policy" ON public.chat_messages
-    FOR SELECT
+    FOR SELECT TO authenticated
     USING (
         auth.uid() IS NOT NULL
         AND EXISTS (
             SELECT 1 FROM public.chat_conversations c
             WHERE c.id = chat_messages.conversation_id
-            AND (
-                c.participant_id = auth.uid()::text
-                OR c.assigned_professional_id = auth.uid()::text
-                OR public.is_authenticated_admin()
-            )
+            AND (c.participant_id = auth.uid()::text OR c.assigned_professional_id = auth.uid()::text OR public.is_authenticated_admin())
         )
     );
 
--- INSERT DE MENSAGENS: Valida remetente, destinatário autorizado da conversa e impede envio para o próprio remetente ou externos
+DROP POLICY IF EXISTS "Mensagens_Insert_Policy" ON public.chat_messages;
 CREATE POLICY "Mensagens_Insert_Policy" ON public.chat_messages
-    FOR INSERT
+    FOR INSERT TO authenticated
     WITH CHECK (
         auth.uid() IS NOT NULL
         AND conversation_id IS NOT NULL
         AND sender_id = auth.uid()::text
         AND sender_id <> recipient_id
         AND (
-            (
-                sender_role IN ('cliente', 'profissional') 
-                AND EXISTS (
-                    SELECT 1 FROM public.user_roles r 
-                    WHERE r.user_id = auth.uid() 
-                    AND r.role = chat_messages.sender_role
-                )
-            )
-            OR (
-                sender_role IN ('admin', 'dono') 
-                AND public.is_authenticated_admin()
-            )
+            (sender_role IN ('cliente', 'profissional') AND EXISTS (SELECT 1 FROM public.user_roles r WHERE r.user_id = auth.uid() AND r.role = chat_messages.sender_role))
+            OR (sender_role IN ('admin', 'dono') AND public.is_authenticated_admin())
         )
         AND EXISTS (
             SELECT 1 FROM public.chat_conversations c
             WHERE c.id = chat_messages.conversation_id
-            AND (
-                c.participant_id = auth.uid()::text
-                OR c.assigned_professional_id = auth.uid()::text
-                OR public.is_authenticated_admin()
-            )
-            -- Valida se o recipient_id corresponde ao participante autorizado da conversa ou canal administrativo legítimo
+            AND (c.participant_id = auth.uid()::text OR c.assigned_professional_id = auth.uid()::text OR public.is_authenticated_admin())
             AND (
                 chat_messages.recipient_id = c.participant_id
                 OR (c.assigned_professional_id IS NOT NULL AND chat_messages.recipient_id = c.assigned_professional_id)
                 OR chat_messages.recipient_id IN ('admin-luxe', 'dono-luxe')
-                OR EXISTS (
-                    SELECT 1 FROM public.user_roles ur
-                    WHERE ur.user_id::text = chat_messages.recipient_id
-                    AND ur.role IN ('admin', 'dono')
-                )
+                OR EXISTS (SELECT 1 FROM public.user_roles ur WHERE ur.user_id::text = chat_messages.recipient_id AND ur.role IN ('admin', 'dono'))
             )
         )
     );
 
--- UPDATE DE MENSAGENS: Apenas o DESTINATÁRIO AUTENTICADO ou ADMINISTRADOR pode alterar o status de leitura
-CREATE POLICY "Mensagens_Update_Policy" ON public.chat_messages
-    FOR UPDATE
-    USING (
-        auth.uid() IS NOT NULL
-        AND (
-            recipient_id = auth.uid()::text
-            OR public.is_authenticated_admin()
-        )
-    )
-    WITH CHECK (
-        auth.uid() IS NOT NULL
-        AND (
-            recipient_id = auth.uid()::text
-            OR public.is_authenticated_admin()
-        )
-        AND status IN ('enviada', 'entregue', 'lida')
-    );
+-- POLÍTICAS RLS DOS MÓDULOS GERAIS (Clientes, Profissionais, Agendamentos, Estoque, Financeiro)
+CREATE POLICY "Clients_Select_Policy" ON public.clients FOR SELECT TO authenticated USING (auth.uid() IS NOT NULL);
+CREATE POLICY "Clients_Manage_Policy" ON public.clients FOR ALL TO authenticated USING (public.is_authenticated_admin()) WITH CHECK (public.is_authenticated_admin());
 
-CREATE POLICY "Mensagens_Delete_Policy" ON public.chat_messages
-    FOR DELETE
-    USING (
-        auth.uid() IS NOT NULL AND public.is_authenticated_admin()
-    );
+CREATE POLICY "Professionals_Select_Policy" ON public.professionals FOR SELECT TO authenticated USING (auth.uid() IS NOT NULL);
+CREATE POLICY "Professionals_Manage_Policy" ON public.professionals FOR ALL TO authenticated USING (public.is_authenticated_admin()) WITH CHECK (public.is_authenticated_admin());
 
--- ==============================================================================
--- 7. HABILITAR REPLICAÇÃO EM TEMPO REAL (SUPABASE REALTIME)
--- ==============================================================================
+CREATE POLICY "Appointments_Select_Policy" ON public.appointments FOR SELECT TO authenticated USING (auth.uid() IS NOT NULL);
+CREATE POLICY "Appointments_Manage_Policy" ON public.appointments FOR ALL TO authenticated USING (public.is_authenticated_professional()) WITH CHECK (public.is_authenticated_professional());
+
+CREATE POLICY "Products_Select_Policy" ON public.products FOR SELECT TO authenticated USING (auth.uid() IS NOT NULL);
+CREATE POLICY "Products_Manage_Policy" ON public.products FOR ALL TO authenticated USING (public.is_authenticated_admin()) WITH CHECK (public.is_authenticated_admin());
+
+CREATE POLICY "Financial_Select_Policy" ON public.financial_transactions FOR SELECT TO authenticated USING (public.is_authenticated_admin());
+CREATE POLICY "Financial_Manage_Policy" ON public.financial_transactions FOR ALL TO authenticated USING (public.is_authenticated_admin()) WITH CHECK (public.is_authenticated_admin());
+
+CREATE POLICY "Services_Select_Policy" ON public.services FOR SELECT TO authenticated USING (auth.uid() IS NOT NULL);
+CREATE POLICY "Services_Manage_Policy" ON public.services FOR ALL TO authenticated USING (public.is_authenticated_admin()) WITH CHECK (public.is_authenticated_admin());
+
+-- REPLICAÇÃO EM TEMPO REAL
 DO $$
 BEGIN
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_publication_tables 
-        WHERE pubname = 'supabase_realtime' AND tablename = 'chat_conversations'
-    ) THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'chat_conversations') THEN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_conversations;
     END IF;
 
-    IF NOT EXISTS (
-        SELECT 1 FROM pg_publication_tables 
-        WHERE pubname = 'supabase_realtime' AND tablename = 'chat_messages'
-    ) THEN
+    IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'chat_messages') THEN
         ALTER PUBLICATION supabase_realtime ADD TABLE public.chat_messages;
+    END IF;
+
+    IF NOT EXISTS (SELECT 1 FROM pg_publication_tables WHERE pubname = 'supabase_realtime' AND tablename = 'appointments') THEN
+        ALTER PUBLICATION supabase_realtime ADD TABLE public.appointments;
     END IF;
 END $$;

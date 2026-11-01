@@ -26,6 +26,8 @@ import { getInitialPurchases } from '@/src/services/clientStorage';
 import { getInitialAppointments, getInitialAbsences } from '@/src/services/agendaStorage';
 import { getInitialConversations } from '@/src/services/chatStorage';
 import { getInitialCommissions } from '@/src/services/financialStorage';
+import { SupabaseRLSTest } from '@/src/components/SupabaseRLSTest';
+import { supabase } from '@/src/lib/supabase';
 import { Menu, Search, Bell, LogOut, ShieldCheck, Home, ArrowLeft } from 'lucide-react';
 
 export default function App() {
@@ -73,6 +75,31 @@ export default function App() {
       window.removeEventListener('storage', handleChatSync);
     };
   }, [setChatConversations]);
+
+  // Main useEffect RLS test query for chat_conversations count
+  useEffect(() => {
+    async function testSupabaseRLS() {
+      try {
+        let { data: { user } } = await supabase.auth.getUser();
+        if (!user) {
+          const { data: authData } = await supabase.auth.signInAnonymously();
+          user = authData?.user || null;
+        }
+        const { count, error } = await supabase
+          .from('chat_conversations')
+          .select('*', { count: 'exact', head: true });
+
+        if (error) {
+          console.error('[Main useEffect Supabase RLS Test] Query chat_conversations failed:', error.message);
+        } else {
+          console.log('[Main useEffect Supabase RLS Test] chat_conversations count query succeeded! Total:', count, 'User:', user?.id);
+        }
+      } catch (err) {
+        console.error('[Main useEffect Supabase RLS Test] Exception:', err);
+      }
+    }
+    testSupabaseRLS();
+  }, []);
 
   const totalUnreadChat = chatConversations.reduce((acc, curr) => acc + (curr.unreadCountAdmin || 0), 0);
 
@@ -487,6 +514,9 @@ export default function App() {
         onClose={() => setShowAdminAuthModal(false)}
         onLoginSuccess={handleAdminLoginSuccess}
       />
+
+      {/* Componente de Teste e Diagnóstico RLS do Supabase */}
+      <SupabaseRLSTest />
     </div>
   );
 }
